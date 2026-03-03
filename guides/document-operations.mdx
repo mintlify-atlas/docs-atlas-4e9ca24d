@@ -1,0 +1,603 @@
+---
+title: Document Operations
+description: Complete guide to CRUD operations, queries, and document management in Renovation Core SDK
+---
+
+The Renovation Core SDK provides a comprehensive API for managing documents (records) in your Frappe backend.
+
+## Creating Documents
+
+### Create a New Document
+
+Create a new document instance with default properties:
+
+```typescript Create New Document
+import { Renovation } from 'renovation-core';
+
+const core = new Renovation();
+core.init({ hostUrl: 'https://your-frappe-site.com' });
+
+// Create a new document
+const doc = await core.model.newDoc({ doctype: 'Customer' });
+
+console.log('New document:', doc.name);  // e.g., "New Customer 1"
+console.log('Document status:', doc.docstatus);  // 0 (Draft)
+console.log('Is local:', doc.__islocal);  // 1 (true)
+```
+
+<Note>
+New documents are automatically added to the local cache and have these default fields:
+- `docstatus: 0` (Draft)
+- `__islocal: 1` (Not saved to backend)
+- `__unsaved: 1` (Has unsaved changes)
+</Note>
+
+### Set Document Fields
+
+Populate the document with data:
+
+```typescript Populate Document
+// Set document fields
+doc.customer_name = 'Acme Corporation';
+doc.customer_type = 'Company';
+doc.customer_group = 'Commercial';
+doc.territory = 'United States';
+
+// Or set fields individually
+core.model.setLocalValue({
+  doctype: 'Customer',
+  docname: doc.name,
+  docfield: 'customer_name',
+  value: 'Acme Corporation'
+});
+```
+
+## Saving Documents
+
+### Save a Document
+
+Persist the document to the backend:
+
+```typescript Save Document
+const saveResponse = await core.model.saveDoc({ doc });
+
+if (saveResponse.success) {
+  const savedDoc = saveResponse.data;
+  console.log('Document saved:', savedDoc.name);
+  console.log('Is local:', savedDoc.__islocal);  // 0 (false)
+} else {
+  console.error('Save failed:', saveResponse.error);
+}
+```
+
+### Submit a Document
+
+For submittable doctypes, submit the document:
+
+```typescript Submit Document
+const submitResponse = await core.model.submitDoc({ doc });
+
+if (submitResponse.success) {
+  const submittedDoc = submitResponse.data;
+  console.log('Document status:', submittedDoc.docstatus);  // 1 (Submitted)
+}
+```
+
+### Save and Submit in One Transaction
+
+```typescript Save and Submit
+const response = await core.model.saveSubmitDoc({ doc });
+
+if (response.success) {
+  console.log('Document saved and submitted');
+}
+```
+
+## Reading Documents
+
+### Get a Single Document
+
+Fetch a document by its name:
+
+```typescript Get Document
+const docResponse = await core.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (docResponse.success) {
+  const customer = docResponse.data;
+  console.log('Customer:', customer.customer_name);
+  console.log('Email:', customer.email_id);
+}
+```
+
+<Note>
+Documents are cached locally. Use `forceFetch: true` to bypass the cache:
+```typescript
+const docResponse = await core.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  forceFetch: true
+});
+```
+</Note>
+
+### Get a Single Field Value
+
+Fetch just one field value:
+
+```typescript Get Field Value
+const valueResponse = await core.model.getValue({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  docfield: 'email_id'
+});
+
+if (valueResponse.success) {
+  console.log('Email:', valueResponse.data.email_id);
+}
+```
+
+## List Queries
+
+### Get List of Documents
+
+Query multiple documents with filters and pagination:
+
+<CodeGroup>
+```typescript Basic List Query
+const listResponse = await core.model.getList({
+  doctype: 'Customer',
+  fields: ['name', 'customer_name', 'email_id', 'territory'],
+  limitPageLength: 20
+});
+
+if (listResponse.success) {
+  const customers = listResponse.data;
+  customers.forEach(customer => {
+    console.log(customer.name, customer.customer_name);
+  });
+}
+```
+
+```typescript With Filters
+const listResponse = await core.model.getList({
+  doctype: 'Customer',
+  fields: ['name', 'customer_name', 'territory'],
+  filters: {
+    customer_type: 'Company',
+    territory: 'United States'
+  },
+  orderBy: 'customer_name asc',
+  limitPageStart: 0,
+  limitPageLength: 50
+});
+```
+
+```typescript Advanced Filters
+const listResponse = await core.model.getList({
+  doctype: 'Sales Order',
+  fields: ['name', 'customer', 'grand_total', 'status'],
+  filters: [
+    ['Sales Order', 'docstatus', '=', 1],
+    ['Sales Order', 'grand_total', '>', 1000],
+    ['Sales Order', 'posting_date', 'Between', ['2024-01-01', '2024-12-31']]
+  ],
+  orderBy: 'grand_total desc'
+});
+```
+</CodeGroup>
+
+<Note>
+Filter operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `in`, `not in`, `like`, `not like`, `Between`
+</Note>
+
+### Pagination
+
+Implement pagination for large datasets:
+
+```typescript Pagination Example
+const PAGE_SIZE = 20;
+let currentPage = 0;
+
+async function fetchPage(page: number) {
+  const response = await core.model.getList({
+    doctype: 'Customer',
+    fields: ['name', 'customer_name'],
+    limitPageStart: page * PAGE_SIZE,
+    limitPageLength: PAGE_SIZE,
+    orderBy: 'modified desc'
+  });
+  
+  return response.data;
+}
+
+// Fetch first page
+const firstPage = await fetchPage(0);
+
+// Fetch next page
+const secondPage = await fetchPage(1);
+```
+
+### Search Link Fields
+
+Search for link field values with autocomplete:
+
+```typescript Search Links
+const searchResponse = await core.model.searchLink({
+  doctype: 'Customer',
+  txt: 'acme',  // Search term
+  options: {
+    filters: { customer_type: 'Company' }
+  }
+});
+
+if (searchResponse.success) {
+  searchResponse.data.forEach(result => {
+    console.log(result.value, result.description);
+  });
+}
+```
+
+## Updating Documents
+
+### Update a Single Field
+
+Update one field without loading the entire document:
+
+```typescript Update Field
+const updateResponse = await core.model.setValue({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  docfield: 'territory',
+  value: 'Canada'
+});
+
+if (updateResponse.success) {
+  console.log('Field updated successfully');
+}
+```
+
+### Update Multiple Fields
+
+```typescript Update Multiple Fields
+// Get the document
+const docResponse = await core.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (docResponse.success) {
+  const customer = docResponse.data;
+  
+  // Update fields
+  customer.customer_name = 'Updated Name';
+  customer.territory = 'Canada';
+  customer.mobile_no = '+1-555-0123';
+  
+  // Save changes
+  const saveResponse = await core.model.saveDoc({ doc: customer });
+  
+  if (saveResponse.success) {
+    console.log('Document updated successfully');
+  }
+}
+```
+
+## Deleting Documents
+
+### Delete a Document
+
+Permanently delete a document:
+
+```typescript Delete Document
+const deleteResponse = await core.model.deleteDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (deleteResponse.success) {
+  console.log('Document deleted successfully');
+}
+```
+
+<Warning>
+Deleting a document is permanent and cannot be undone. Consider using a status field or canceling submitted documents instead.
+</Warning>
+
+### Cancel a Submitted Document
+
+For submittable documents, cancel instead of delete:
+
+```typescript Cancel Document
+const cancelResponse = await core.model.cancelDoc({ doc });
+
+if (cancelResponse.success) {
+  const cancelledDoc = cancelResponse.data;
+  console.log('Document status:', cancelledDoc.docstatus);  // 2 (Cancelled)
+}
+```
+
+## Child Tables
+
+### Add Child Documents
+
+Work with child table fields:
+
+```typescript Add Child Document
+const invoice = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SINV-00001'
+});
+
+if (invoice.success) {
+  const doc = invoice.data;
+  
+  // Add a child document to items table
+  const childDoc = await core.model.addChildDoc({
+    doc: doc,
+    field: 'items'
+  });
+  
+  // Set child document fields
+  childDoc.item_code = 'ITEM-001';
+  childDoc.qty = 5;
+  childDoc.rate = 100;
+  
+  // Save the parent document
+  await core.model.saveDoc({ doc });
+}
+```
+
+## Document Copy and Amend
+
+### Copy a Document
+
+Create a duplicate of an existing document:
+
+```typescript Copy Document
+const originalDoc = await core.model.getDoc({
+  doctype: 'Sales Order',
+  docname: 'SO-00001'
+});
+
+if (originalDoc.success) {
+  const copiedDoc = await core.model.copyDoc({ doc: originalDoc.data });
+  
+  // Modify the copy
+  copiedDoc.customer = 'New Customer';
+  
+  // Save the copy
+  await core.model.saveDoc({ doc: copiedDoc });
+}
+```
+
+### Amend a Cancelled Document
+
+Create an amended version of a cancelled document:
+
+```typescript Amend Document
+const cancelledDoc = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SINV-00001'
+});
+
+if (cancelledDoc.success) {
+  const amendedDoc = await core.model.amendDoc({ doc: cancelledDoc.data });
+  
+  console.log('Amended from:', amendedDoc.amended_from);
+  
+  // Save the amended document
+  await core.model.saveDoc({ doc: amendedDoc });
+}
+```
+
+## Document Assignment
+
+### Assign Document to User
+
+Assign documents to users for task management:
+
+```typescript Assign Document
+const assignResponse = await core.model.assignDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  assignTo: 'user@example.com',
+  description: 'Follow up with customer',
+  dueDate: '2024-12-31',
+  priority: 'High',
+  notify: true
+});
+
+if (assignResponse.success) {
+  console.log('Document assigned successfully');
+}
+```
+
+### Bulk Assignment
+
+```typescript Bulk Assign
+await core.model.assignDoc({
+  doctype: 'Lead',
+  docnames: ['LEAD-001', 'LEAD-002', 'LEAD-003'],
+  assignTo: ['user1@example.com', 'user2@example.com'],
+  description: 'Follow up on leads',
+  priority: 'Medium'
+});
+```
+
+### Get Assigned Documents
+
+```typescript Get Assignments
+const assignedDocs = await core.model.getDocsAssignedToUser({
+  assignedTo: 'user@example.com',
+  doctype: 'Customer',  // Optional: filter by doctype
+  status: 'Open'  // 'Open' | 'Closed'
+});
+
+if (assignedDocs.success) {
+  assignedDocs.data.forEach(assignment => {
+    console.log(`${assignment.doctype}: ${assignment.docname}`);
+    console.log(`Due: ${assignment.dueDate}, Priority: ${assignment.priority}`);
+  });
+}
+```
+
+### Complete Assignment
+
+```typescript Complete Assignment
+await core.model.completeDocAssignment({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  assignedTo: 'user@example.com'
+});
+```
+
+### Unassign Document
+
+```typescript Unassign
+await core.model.unAssignDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  unAssignFrom: 'user@example.com'
+});
+```
+
+## Tags
+
+### Add Tags to Documents
+
+Organize documents with tags:
+
+```typescript Add Tag
+const tagResponse = await core.model.addTag({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  tag: 'VIP'
+});
+
+if (tagResponse.success) {
+  console.log('Tag added:', tagResponse.data);
+}
+```
+
+### Get Tagged Documents
+
+Find all documents with a specific tag:
+
+```typescript Get Tagged Documents
+const taggedDocs = await core.model.getTaggedDocs({
+  doctype: 'Customer',
+  tag: 'VIP'
+});
+
+if (taggedDocs.success) {
+  console.log('VIP customers:', taggedDocs.data);
+}
+```
+
+### Get All Tags
+
+```typescript Get All Tags
+const tagsResponse = await core.model.getTags({
+  doctype: 'Customer',
+  likeTag: 'VI%'  // SQL LIKE pattern
+});
+
+if (tagsResponse.success) {
+  console.log('Tags:', tagsResponse.data);
+}
+```
+
+### Remove Tag
+
+```typescript Remove Tag
+await core.model.removeTag({
+  doctype: 'Customer',
+  docname: 'CUST-00001',
+  tag: 'VIP'
+});
+```
+
+## Local Cache Management
+
+### Add to Cache
+
+Manually add documents to the local cache:
+
+```typescript Add to Cache
+const doc = new RenovationDocument({
+  doctype: 'Customer',
+  name: 'CUST-00001',
+  customer_name: 'Acme Corp'
+});
+
+core.model.addToLocals({ doc });
+```
+
+### Get from Cache
+
+```typescript Get from Cache
+const cachedDoc = core.model.getFromLocals({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (cachedDoc) {
+  console.log('Found in cache:', cachedDoc.customer_name);
+} else {
+  console.log('Not in cache');
+}
+```
+
+### Clear Cache
+
+```typescript Clear Cache
+core.model.clearCache();
+console.log('Cache cleared');
+```
+
+## Reports
+
+### Get Report Data
+
+Fetch report data with filters:
+
+```typescript Get Report
+const reportResponse = await core.model.getReport({
+  report: 'Sales Analytics',
+  filters: {
+    company: 'Acme Inc',
+    from_date: '2024-01-01',
+    to_date: '2024-12-31'
+  }
+});
+
+if (reportResponse.success) {
+  const { columns, result } = reportResponse.data;
+  
+  console.log('Columns:', columns);
+  console.log('Data:', result);
+}
+```
+
+## Best Practices
+
+1. **Use the cache**: Documents are cached automatically. Avoid unnecessary API calls.
+
+2. **Batch operations**: When possible, use bulk operations for better performance.
+
+3. **Field selection**: Only fetch fields you need to reduce payload size.
+
+4. **Error handling**: Always check `response.success` before accessing data.
+
+5. **Clear cache on logout**: The SDK does this automatically via `SessionStatus`.
+
+6. **Use filters wisely**: Apply filters at the database level instead of filtering in memory.
+
+## Related Resources
+
+- [Model Controller API](/api/model-controller)
+- [Permission Controller API](/api/permission-controller)
+- [Filters and Queries](/api/filters)

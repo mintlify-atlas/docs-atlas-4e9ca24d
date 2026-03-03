@@ -1,0 +1,297 @@
+---
+title: "Initialization"
+description: "Initialize and configure your Renovation Core SDK instance"
+---
+
+## Overview
+
+The Renovation Core SDK must be initialized before use. The initialization process sets up the backend connection, configures controllers, and prepares the SDK for API calls.
+
+## InitParams Interface
+
+The `init()` method accepts an `InitParams` object with the following properties:
+
+<ParamField path="hostURL" type="string" required>
+  The URL of your backend server (Frappe site URL)
+  
+  ```typescript
+  hostURL: "https://your-site.frappe.cloud"
+  ```
+</ParamField>
+
+<ParamField path="backend" type="RenovationBackend" default="frappe">
+  The backend type to use. Currently supports:
+  - `"frappe"` - Frappe Framework backend (default)
+  - `"firebase"` - Firebase backend
+  
+  ```typescript
+  backend: "frappe"
+  ```
+</ParamField>
+
+<ParamField path="clientId" type="string">
+  Optional client identifier for HTTP requests. Used to track and identify the client making requests.
+  
+  If not provided for Frappe backend, the SDK will automatically fetch and set a client ID.
+  
+  ```typescript
+  clientId: "my-app-client-id"
+  ```
+</ParamField>
+
+<ParamField path="disableLog" type="boolean" default={false}>
+  Whether to disable all SDK logging output.
+  
+  When `false`, enables logging with namespace `"renovation-core-*"`
+  
+  ```typescript
+  disableLog: false
+  ```
+</ParamField>
+
+<ParamField path="useJWT" type="boolean" default={false}>
+  Whether to use JWT (JSON Web Token) authentication instead of session-based authentication.
+  
+  Only applicable when `backend` is set to `"frappe"`
+  
+  ```typescript
+  useJWT: true
+  ```
+</ParamField>
+
+## Basic Initialization
+
+```typescript
+import { Renovation } from "renovation-core";
+
+const renovation = new Renovation();
+
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe"
+});
+```
+
+## Complete Initialization Example
+
+```typescript
+import { Renovation } from "renovation-core";
+
+const renovation = new Renovation();
+
+try {
+  await renovation.init({
+    hostURL: "https://your-site.frappe.cloud",
+    backend: "frappe",
+    clientId: "my-mobile-app",
+    disableLog: false,
+    useJWT: true
+  });
+  
+  console.log("Renovation Core initialized successfully");
+} catch (error) {
+  console.error("Initialization failed:", error);
+}
+```
+
+## Backend Configuration
+
+### Frappe Backend
+
+When using the Frappe backend (default), the SDK initializes the following controllers:
+
+- **Auth Controller** - Authentication and session management
+- **Model Controller** - Document CRUD operations
+- **Meta Controller** - DocType metadata management
+- **Permission Controller** - Permission checking
+- **Storage Controller** - File upload and management
+- **UI Controller** - UI-related operations
+- **Translation Controller** - Multi-language support
+- **Dashboard Controller** - Dashboard data retrieval
+- **Defaults Controller** - Default values management
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe"
+});
+
+// Access controllers
+const user = await renovation.auth.getCurrentUser();
+const doc = await renovation.model.getDoc("User", "administrator");
+```
+
+### Firebase Backend
+
+<Note>
+Firebase backend support is limited. Frappe backend is recommended for production use.
+</Note>
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-firebase-project.firebaseapp.com",
+  backend: "firebase"
+});
+```
+
+## Client ID Setup
+
+The client ID is used to identify and track the client making requests to the backend.
+
+### Automatic Client ID (Frappe)
+
+When using the Frappe backend without providing a `clientId`, the SDK automatically fetches and sets one:
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe"
+  // clientId is automatically fetched
+});
+```
+
+### Manual Client ID
+
+You can provide a custom client ID for tracking purposes:
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe",
+  clientId: "mobile-app-v1.0"
+});
+```
+
+<Note>
+On browser environments, the client ID is automatically stored in `localStorage` with the key `renovation_core_client_id` and persists across sessions.
+</Note>
+
+### Client ID in HTTP Headers
+
+Once set, the client ID is automatically included in all HTTP requests via the `X-Client-Site` header:
+
+```
+X-Client-Site: mobile-app-v1.0
+```
+
+## JWT Authentication Setup
+
+For JWT-based authentication instead of session cookies:
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe",
+  useJWT: true
+});
+
+// Login with JWT
+const response = await renovation.auth.login("username", "password");
+if (response.success) {
+  // JWT token is automatically managed by the SDK
+  console.log("Logged in with JWT");
+}
+```
+
+<Warning>
+JWT authentication is only available when using the Frappe backend. The `useJWT` parameter is ignored for other backends.
+</Warning>
+
+## Logging Configuration
+
+Control SDK logging output:
+
+```typescript
+// Enable logging (default)
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  disableLog: false
+});
+
+// Disable all logging
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  disableLog: true
+});
+```
+
+When logging is enabled, the SDK uses the debug namespace `renovation-core-*` for all log messages.
+
+## Initialization Timing
+
+The `init()` method is asynchronous and logs the initialization time:
+
+```typescript
+const renovation = new Renovation();
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud"
+});
+// Console: "Renovation Core: Took 150ms to initialize"
+```
+
+<Note>
+Always `await` the `init()` call to ensure the SDK is fully initialized before making API calls.
+</Note>
+
+## Available Properties After Initialization
+
+Once initialized, the Renovation instance provides access to:
+
+```typescript
+const renovation = new Renovation();
+await renovation.init({ hostURL: "...", backend: "frappe" });
+
+// Controllers
+renovation.auth          // Authentication
+renovation.model         // Document operations
+renovation.meta          // Metadata
+renovation.perm          // Permissions
+renovation.storage       // File storage
+renovation.ui            // UI operations
+renovation.translate     // Translations
+renovation.dashboard     // Dashboards
+renovation.defaults      // Defaults
+
+// Utilities
+renovation.config        // Configuration instance
+renovation.request       // HTTP request function
+renovation.call          // Custom API calls
+renovation.utils         // Utility functions
+renovation.socketio      // WebSocket client
+renovation.scriptManager // Script management
+renovation.log           // Log manager
+renovation.bus           // Message bus
+renovation.frappe        // Frappe-specific utilities (if backend is frappe)
+```
+
+## Deprecated Usage
+
+<Warning>
+The following initialization signature is deprecated and will be removed in future versions:
+
+```typescript
+// ❌ Deprecated - Do not use
+await renovation.init(
+  "frappe",
+  "https://your-site.frappe.cloud",
+  "client-id",
+  false
+);
+
+// ✅ Use this instead
+await renovation.init({
+  backend: "frappe",
+  hostURL: "https://your-site.frappe.cloud",
+  clientId: "client-id",
+  disableLog: false
+});
+```
+</Warning>
+
+## Next Steps
+
+After initialization, you can:
+
+1. [Configure the SDK](/core/configuration) with additional settings
+2. [Handle errors](/core/error-handling) from API calls
+3. Use various controllers for specific operations

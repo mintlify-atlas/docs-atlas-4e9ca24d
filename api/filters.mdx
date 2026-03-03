@@ -1,0 +1,672 @@
+---
+title: Filters API
+description: Database filter types and operators for querying documents in Renovation Core SDK
+---
+
+## Overview
+
+The filters module provides TypeScript types for building database queries with type safety. Filters are used throughout the SDK for querying documents, and support a wide range of operators for complex queries.
+
+## DBFilter Type
+
+The main filter type that supports two different syntaxes: object notation and array notation.
+
+```typescript
+type DBFilter =
+  | { [x: string]: DBValue | [DBOperator, DBValue] }
+  | [[string, DBOperator, DBValue]?]
+```
+
+<ResponseField name="Object notation" type="{ [field]: value | [operator, value] }">
+  Simple key-value pairs for fields, with optional operator tuples for advanced queries
+</ResponseField>
+
+<ResponseField name="Array notation" type="[[field, operator, value]?]">
+  Array of filter tuples for complex multi-condition queries
+</ResponseField>
+
+## Filter Syntaxes
+
+### Object Notation
+
+Simple and readable for basic queries.
+
+```typescript
+import { Renovation } from "@renovation/core";
+
+const renovation = new Renovation();
+await renovation.init("https://example.com");
+
+// Simple equality
+const customers = await renovation.model.getList({
+  doctype: "Customer",
+  filters: {
+    country: "United States"
+  }
+});
+
+// Multiple conditions (AND)
+const activeCustomers = await renovation.model.getList({
+  doctype: "Customer",
+  filters: {
+    country: "United States",
+    status: "Active"
+  }
+});
+
+// With operators
+const recentOrders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    creation: [">", "2024-01-01"],
+    grand_total: [">=", 1000]
+  }
+});
+```
+
+### Array Notation
+
+More flexible for complex queries with OR conditions.
+
+```typescript
+// Multiple conditions
+const orders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: [
+    ["status", "=", "Draft"],
+    ["customer", "=", "CUST-001"],
+    ["grand_total", ">=", 1000]
+  ]
+});
+
+// Can be mixed with OR filters in some contexts
+const items = await renovation.model.getList({
+  doctype: "Item",
+  filters: [
+    ["item_group", "IN", ["Electronics", "Computers"]],
+    ["disabled", "=", 0]
+  ]
+});
+```
+
+## DBOperator Type
+
+Supported query operators for filtering.
+
+<ResponseField name="=" type="DBOperator">
+  Equals (exact match)
+</ResponseField>
+
+<ResponseField name="!=" type="DBOperator">
+  Not equals
+</ResponseField>
+
+<ResponseField name=">" type="DBOperator">
+  Greater than
+</ResponseField>
+
+<ResponseField name="<" type="DBOperator">
+  Less than
+</ResponseField>
+
+<ResponseField name=">=" type="DBOperator">
+  Greater than or equal to
+</ResponseField>
+
+<ResponseField name="<=" type="DBOperator">
+  Less than or equal to
+</ResponseField>
+
+<ResponseField name="LIKE" type="DBOperator">
+  Pattern matching (use % as wildcard)
+</ResponseField>
+
+<ResponseField name="NOT LIKE" type="DBOperator">
+  Inverse pattern matching
+</ResponseField>
+
+<ResponseField name="IS" type="DBOperator">
+  NULL check (use with "set" or "not set")
+</ResponseField>
+
+<ResponseField name="IN" type="DBOperator">
+  Value in list
+</ResponseField>
+
+<ResponseField name="NOT IN" type="DBOperator">
+  Value not in list
+</ResponseField>
+
+<ResponseField name="BETWEEN" type="DBOperator">
+  Value between two bounds (use array with two values)
+</ResponseField>
+
+<ResponseField name="ANCESTORS OF" type="DBOperator">
+  Hierarchical query - ancestors of node
+</ResponseField>
+
+<ResponseField name="NOT ANCESTORS OF" type="DBOperator">
+  Hierarchical query - not ancestors of node
+</ResponseField>
+
+<ResponseField name="DESCENDANTS OF" type="DBOperator">
+  Hierarchical query - descendants of node
+</ResponseField>
+
+<ResponseField name="NOT DESCENDANTS OF" type="DBOperator">
+  Hierarchical query - not descendants of node
+</ResponseField>
+
+## DBValue Type
+
+Allowed values for filter comparisons.
+
+```typescript
+type DBValue = DBBasicValues | DBBasicValues[]
+type DBBasicValues = string | number
+```
+
+<ResponseField name="string" type="DBBasicValues">
+  String values
+</ResponseField>
+
+<ResponseField name="number" type="DBBasicValues">
+  Numeric values
+</ResponseField>
+
+<ResponseField name="array" type="DBBasicValues[]">
+  Array of strings or numbers (for IN, NOT IN, BETWEEN operators)
+</ResponseField>
+
+## Operator Examples
+
+### Equality Operators
+
+```typescript
+// Equals
+const filters = {
+  status: "Active"
+  // or explicitly: status: ["=", "Active"]
+};
+
+// Not equals
+const notDraft = {
+  status: ["!=", "Draft"]
+};
+```
+
+### Comparison Operators
+
+```typescript
+// Greater than
+const highValue = {
+  amount: [">", 1000]
+};
+
+// Greater than or equal
+const minValue = {
+  quantity: [">=", 10]
+};
+
+// Less than
+const lowStock = {
+  stock_qty: ["<", 5]
+};
+
+// Less than or equal
+const maxPrice = {
+  price: ["<=", 500]
+};
+
+// Combine multiple comparisons
+const priceRange = await renovation.model.getList({
+  doctype: "Item",
+  filters: {
+    standard_rate: [">=", 100],
+    standard_rate2: ["<=", 1000]  
+  }
+});
+// Note: Use BETWEEN for cleaner range queries
+```
+
+### LIKE Operator
+
+Pattern matching with wildcards.
+
+```typescript
+// Starts with
+const startsWithA = {
+  customer_name: ["LIKE", "A%"]
+};
+
+// Ends with
+const endsWithInc = {
+  company_name: ["LIKE", "% Inc"]
+};
+
+// Contains
+const containsTech = {
+  description: ["LIKE", "%technology%"]
+};
+
+// NOT LIKE
+const excludeTest = {
+  email: ["NOT LIKE", "%test%"]
+};
+
+// Practical example
+const searchCustomers = await renovation.model.getList({
+  doctype: "Customer",
+  filters: {
+    customer_name: ["LIKE", `%${searchTerm}%`]
+  }
+});
+```
+
+### IN Operator
+
+Check if value is in a list.
+
+```typescript
+// Multiple values
+const specificStatuses = {
+  status: ["IN", ["Draft", "Submitted", "Pending"]]
+};
+
+// Multiple IDs
+const selectedItems = {
+  name: ["IN", ["ITEM-001", "ITEM-002", "ITEM-003"]]
+};
+
+// NOT IN
+const excludeStatuses = {
+  status: ["NOT IN", ["Cancelled", "Closed"]]
+};
+
+// Practical example
+const selectedOrders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    name: ["IN", orderIds],
+    status: ["NOT IN", ["Cancelled"]]
+  }
+});
+```
+
+### BETWEEN Operator
+
+Range queries.
+
+```typescript
+// Date range
+const dateRange = {
+  creation: ["BETWEEN", ["2024-01-01", "2024-12-31"]]
+};
+
+// Numeric range
+const priceRange = {
+  amount: ["BETWEEN", [100, 1000]]
+};
+
+// Practical example
+const quarterlyOrders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    transaction_date: ["BETWEEN", ["2024-01-01", "2024-03-31"]],
+    grand_total: ["BETWEEN", [1000, 50000]]
+  }
+});
+```
+
+### IS Operator
+
+NULL checks.
+
+```typescript
+// Check if field is set (not NULL)
+const hasValue = {
+  email: ["IS", "set"]
+};
+
+// Check if field is NULL
+const noValue = {
+  phone: ["IS", "not set"]
+};
+
+// Practical example
+const customersWithEmail = await renovation.model.getList({
+  doctype: "Customer",
+  filters: {
+    email_id: ["IS", "set"],
+    mobile_no: ["IS", "not set"]
+  }
+});
+```
+
+### Hierarchical Operators
+
+For tree-structured doctypes (like Item Groups, Territories).
+
+```typescript
+// Get ancestors
+const ancestors = {
+  name: ["ANCESTORS OF", "Electronics/Laptops/Gaming"]
+};
+// Returns: All Categories, Electronics, Electronics/Laptops
+
+// Get descendants  
+const descendants = {
+  name: ["DESCENDANTS OF", "Electronics"]
+};
+// Returns: Electronics/Laptops, Electronics/Mobile, etc.
+
+// Exclude ancestors
+const notAncestors = {
+  name: ["NOT ANCESTORS OF", "Electronics/Laptops"]
+};
+
+// Exclude descendants
+const notDescendants = {
+  name: ["NOT DESCENDANTS OF", "Electronics"]
+};
+
+// Practical example
+const categoryItems = await renovation.model.getList({
+  doctype: "Item",
+  filters: {
+    item_group: ["DESCENDANTS OF", "Electronics"]
+  }
+});
+```
+
+## Complex Filter Examples
+
+### Multiple Conditions (AND)
+
+```typescript
+// All conditions must match
+const filters = {
+  doctype: "Sales Order",
+  filters: {
+    status: "Draft",
+    customer: "CUST-001",
+    grand_total: [">=", 1000],
+    transaction_date: [">", "2024-01-01"]
+  }
+};
+```
+
+### Search and Filter
+
+```typescript
+// Combine text search with filters
+const searchResults = await renovation.model.getList({
+  doctype: "Customer",
+  filters: {
+    customer_name: ["LIKE", "%Tech%"],
+    country: "United States",
+    disabled: 0
+  },
+  fields: ["name", "customer_name", "email_id"],
+  orderBy: "customer_name asc"
+});
+```
+
+### Date Filtering
+
+```typescript
+// This month's orders
+const thisMonth = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    transaction_date: [">=", "2024-03-01"],
+    transaction_date2: ["<", "2024-04-01"]
+  }
+});
+
+// Or using BETWEEN
+const thisMonthBetween = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    transaction_date: ["BETWEEN", ["2024-03-01", "2024-03-31"]]
+  }
+});
+```
+
+### Status Filtering
+
+```typescript
+// Active documents only
+const activeOnly = await renovation.model.getList({
+  doctype: "Item",
+  filters: {
+    disabled: 0,
+    has_variants: 0
+  }
+});
+
+// Exclude specific statuses
+const openOrders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    status: ["NOT IN", ["Cancelled", "Closed", "Completed"]],
+    docstatus: ["<", 2]  // Not cancelled
+  }
+});
+```
+
+### Array Notation for Complex Queries
+
+```typescript
+// Array syntax gives more control
+const complexFilters = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: [
+    ["customer", "LIKE", "%Tech%"],
+    ["status", "IN", ["Draft", "Submitted"]],
+    ["grand_total", "BETWEEN", [1000, 50000]],
+    ["transaction_date", ">=", "2024-01-01"]
+  ],
+  orderBy: "transaction_date desc",
+  limit: 50
+});
+```
+
+## Type-Safe Filter Building
+
+```typescript
+import { DBFilter, DBOperator } from "@renovation/core";
+
+// Build filters programmatically with type safety
+function buildCustomerFilters(
+  country?: string,
+  status?: string,
+  searchTerm?: string
+): DBFilter {
+  const filters: DBFilter = {};
+  
+  if (country) {
+    filters.country = country;
+  }
+  
+  if (status) {
+    filters.status = status;
+  }
+  
+  if (searchTerm) {
+    filters.customer_name = ["LIKE", `%${searchTerm}%`];
+  }
+  
+  return filters;
+}
+
+// Use the builder
+const filters = buildCustomerFilters(
+  "United States",
+  "Active",
+  "tech"
+);
+
+const customers = await renovation.model.getList({
+  doctype: "Customer",
+  filters
+});
+```
+
+## Filter Utilities
+
+```typescript
+// Helper to build date range filters
+function dateRangeFilter(
+  field: string,
+  start: string,
+  end: string
+): DBFilter {
+  return {
+    [field]: ["BETWEEN", [start, end]]
+  };
+}
+
+// Helper for IN filter
+function inFilter(field: string, values: string[]): DBFilter {
+  return {
+    [field]: ["IN", values]
+  };
+}
+
+// Helper for search filter
+function searchFilter(field: string, term: string): DBFilter {
+  return {
+    [field]: ["LIKE", `%${term}%`]
+  };
+}
+
+// Use helpers
+const orders = await renovation.model.getList({
+  doctype: "Sales Order",
+  filters: {
+    ...dateRangeFilter("transaction_date", "2024-01-01", "2024-12-31"),
+    ...inFilter("status", ["Draft", "Submitted"]),
+    ...searchFilter("customer_name", "tech")
+  }
+});
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Object Notation" icon="cube">
+    For simple queries, object notation is more readable and concise.
+  </Card>
+  
+  <Card title="Type Safety" icon="shield-check">
+    Import and use the DBFilter type for compile-time validation.
+  </Card>
+  
+  <Card title="Sanitize User Input" icon="filter">
+    Always sanitize user input when building dynamic filters to prevent injection.
+  </Card>
+  
+  <Card title="Index Fields" icon="bolt">
+    Ensure filtered fields are indexed in the database for performance.
+  </Card>
+</CardGroup>
+
+<Warning>
+  When using LIKE with user input, be careful of SQL injection. The SDK handles escaping, but validate input format where possible.
+</Warning>
+
+<Tip>
+  Use BETWEEN instead of combining greater-than-or-equal and less-than-or-equal operators for cleaner, more efficient range queries.
+</Tip>
+
+## Complete Filter Example
+
+```typescript
+import { 
+  Renovation, 
+  DBFilter, 
+  DBOperator 
+} from "@renovation/core";
+
+const renovation = new Renovation();
+await renovation.init("https://example.com");
+
+// Advanced filtering example
+interface OrderFilters {
+  customer?: string;
+  status?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+  minAmount?: number;
+  searchTerm?: string;
+}
+
+async function getFilteredOrders(
+  filterParams: OrderFilters
+): Promise<any> {
+  const filters: DBFilter = {};
+  
+  // Direct equality
+  if (filterParams.customer) {
+    filters.customer = filterParams.customer;
+  }
+  
+  // IN operator
+  if (filterParams.status?.length) {
+    filters.status = ["IN", filterParams.status];
+  }
+  
+  // Date range
+  if (filterParams.dateFrom && filterParams.dateTo) {
+    filters.transaction_date = [
+      "BETWEEN",
+      [filterParams.dateFrom, filterParams.dateTo]
+    ];
+  }
+  
+  // Comparison
+  if (filterParams.minAmount) {
+    filters.grand_total = [">=", filterParams.minAmount];
+  }
+  
+  // Text search
+  if (filterParams.searchTerm) {
+    filters.customer_name = [
+      "LIKE", 
+      `%${filterParams.searchTerm}%`
+    ];
+  }
+  
+  return renovation.model.getList({
+    doctype: "Sales Order",
+    filters,
+    fields: [
+      "name",
+      "customer",
+      "customer_name",
+      "transaction_date",
+      "grand_total",
+      "status"
+    ],
+    orderBy: "transaction_date desc",
+    limit: 100
+  });
+}
+
+// Usage
+const orders = await getFilteredOrders({
+  status: ["Draft", "Submitted"],
+  dateFrom: "2024-01-01",
+  dateTo: "2024-12-31",
+  minAmount: 1000,
+  searchTerm: "tech"
+});
+
+if (orders.success) {
+  console.log(`Found ${orders.data.length} orders`);
+  orders.data.forEach(order => {
+    console.log(`${order.name}: ${order.customer_name} - $${order.grand_total}`);
+  });
+}
+```

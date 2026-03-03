@@ -1,0 +1,371 @@
+---
+title: 'DocType'
+description: 'Document type metadata class for managing Frappe DocType structures'
+---
+
+## Overview
+
+`DocType` is a class that contains metadata and properties of a Frappe document type. It provides helper functions to parse DocType information from Frappe format and manage document structure, fields, and permissions.
+
+## Class Structure
+
+```typescript
+class DocType {
+  [x: string]: any;
+  
+  constructor(public doctype: string)
+  
+  static fromFrappeDocType(meta: FrappeDocType): DocType
+}
+```
+
+## Constructor
+
+### DocType(doctype)
+
+Creates a new `DocType` instance.
+
+<ParamField path="doctype" type="string" required>
+  The name of the document type.
+</ParamField>
+
+## Static Methods
+
+### fromFrappeDocType(meta)
+
+Parses a DocType from Frappe format into a structured `DocType` instance. This method performs several transformations:
+
+<ParamField path="meta" type="FrappeDocType" required>
+  The raw Frappe DocType metadata object containing all doctype information.
+</ParamField>
+
+<ResponseField name="return" type="DocType">
+  A fully parsed and structured `DocType` instance.
+</ResponseField>
+
+#### Transformations
+
+The method performs the following operations:
+
+1. **Boolean Conversion**: Converts Frappe's 0/1 values to true/false for boolean properties
+2. **Naming Convention**: Transforms underscore_case property names to camelCase
+3. **Field Parsing**: Converts all `FrappeDocField` objects to `DocField` instances
+4. **Permission Setup**: Transforms permission objects to `DocPerm` instances
+5. **Custom Mappings**: Applies special mappings like `issingle` → `isSingle`
+
+## Properties
+
+### Document Behavior
+
+<ParamField path="doctype" type="string" required>
+  The name of the document type.
+</ParamField>
+
+<ParamField path="isSingle" type="boolean" default="false">
+  Whether this is a single-type document. Single documents have only one instance per doctype (e.g., System Settings).
+</ParamField>
+
+<ParamField path="isTable" type="boolean" default="false">
+  Whether this document type can be used as a child table in other documents.
+</ParamField>
+
+<ParamField path="isSubmittable" type="boolean" default="false">
+  Whether documents of this type can be submitted. Submittable documents cannot be deleted once submitted, only cancelled.
+</ParamField>
+
+<ParamField path="treeview" type="boolean" default="false">
+  Whether the document should be displayed in a tree/hierarchical view.
+</ParamField>
+
+### Display Properties
+
+<ParamField path="titleField" type="string" default="''">
+  The field name to use as the document's title in list views and references.
+</ParamField>
+
+<ParamField path="imageField" type="string" default="''">
+  The field name that contains the image URL to display for this document.
+</ParamField>
+
+### Structure
+
+<ParamField path="fields" type="DocField[]" default="[]">
+  Array of active fields defined for this document type. These are the visible, enabled fields.
+</ParamField>
+
+<ParamField path="disabledFields" type="DocField[]" default="[]">
+  Array of hidden or disabled fields (corresponds to `_fields` in Frappe).
+</ParamField>
+
+<ParamField path="permissions" type="DocPerm[]" default="[]">
+  Array of permission rules defining access control for this document type.
+</ParamField>
+
+## Usage Examples
+
+### Creating a Basic DocType
+
+```typescript
+import DocType from '@renovationjs/core/model/doctype';
+
+// Create a simple DocType instance
+const itemDocType = new DocType('Item');
+itemDocType.titleField = 'item_name';
+itemDocType.imageField = 'image';
+itemDocType.isSubmittable = false;
+
+console.log(itemDocType.doctype); // 'Item'
+```
+
+### Parsing from Frappe Format
+
+```typescript
+import DocType from '@renovationjs/core/model/doctype';
+
+// API response from Frappe
+const frappeResponse = {
+  name: 'Item',
+  issingle: 0,
+  istable: 0,
+  is_submittable: 1,
+  title_field: 'item_name',
+  image_field: 'image',
+  editable_grid: 1,
+  track_changes: 1,
+  fields: [
+    {
+      fieldname: 'item_code',
+      fieldtype: 'Data',
+      label: 'Item Code',
+      reqd: 1,
+      in_list_view: 1
+    },
+    {
+      fieldname: 'item_name',
+      fieldtype: 'Data',
+      label: 'Item Name',
+      reqd: 1
+    }
+  ],
+  _fields: [],
+  permissions: [
+    {
+      role: 'Sales User',
+      read: 1,
+      write: 1,
+      create: 1
+    }
+  ]
+};
+
+// Parse to DocType
+const docType = DocType.fromFrappeDocType(frappeResponse);
+
+console.log(docType.isSingle); // false (converted from issingle: 0)
+console.log(docType.isSubmittable); // true (converted from is_submittable: 1)
+console.log(docType.titleField); // 'item_name'
+console.log(docType.fields.length); // 2
+console.log(docType.fields[0].fieldname); // 'item_code'
+```
+
+### Working with Fields
+
+```typescript
+// Access and filter fields
+const requiredFields = docType.fields.filter(field => field.reqd);
+console.log('Required fields:', requiredFields.map(f => f.fieldname));
+
+// Find specific field
+const nameField = docType.fields.find(f => f.fieldname === 'item_name');
+if (nameField) {
+  console.log(`Label: ${nameField.label}`);
+  console.log(`Type: ${nameField.fieldtype}`);
+}
+
+// Check list view fields
+const listViewFields = docType.fields.filter(f => f.inListView);
+console.log('List view columns:', listViewFields.map(f => f.label));
+```
+
+### Checking Document Type Properties
+
+```typescript
+// Determine document capabilities
+if (docType.isSubmittable) {
+  console.log('This document supports submit/cancel workflow');
+}
+
+if (docType.isSingle) {
+  console.log('Only one instance of this document exists');
+}
+
+if (docType.isTable) {
+  console.log('This can be used as a child table');
+}
+
+if (docType.treeview) {
+  console.log('Documents are organized hierarchically');
+}
+```
+
+### Working with Permissions
+
+```typescript
+// Check permissions
+const userRole = 'Sales User';
+const userPerm = docType.permissions.find(p => p.role === userRole);
+
+if (userPerm) {
+  console.log(`Can read: ${userPerm.read}`);
+  console.log(`Can write: ${userPerm.write}`);
+  console.log(`Can create: ${userPerm.create}`);
+}
+
+// List all roles with access
+const rolesWithAccess = docType.permissions
+  .filter(p => p.read)
+  .map(p => p.role);
+console.log('Roles with read access:', rolesWithAccess);
+```
+
+### Building Forms Dynamically
+
+```typescript
+// Generate form structure from DocType
+function buildFormFields(docType: DocType) {
+  return docType.fields
+    .filter(field => !field.hidden)
+    .map(field => ({
+      name: field.fieldname,
+      label: field.label,
+      type: field.fieldtype,
+      required: field.reqd,
+      readOnly: field.readOnly,
+      options: field.options
+    }));
+}
+
+const formFields = buildFormFields(docType);
+console.log('Form configuration:', formFields);
+```
+
+### Type-Safe Usage
+
+```typescript
+interface CustomDocType extends DocType {
+  doctype: string;
+  isSingle: boolean;
+  fields: DocField[];
+}
+
+function validateDocType(docType: DocType): boolean {
+  // Ensure required fields exist
+  if (!docType.doctype) return false;
+  
+  // Check for mandatory fields
+  const hasMandatoryFields = docType.fields.some(f => f.reqd);
+  
+  // Validate single documents don't have certain fields
+  if (docType.isSingle) {
+    const hasNameField = docType.fields.some(f => f.fieldname === 'name');
+    if (hasNameField) return false;
+  }
+  
+  return true;
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use fromFrappeDocType for API Responses">
+    Always use the static `fromFrappeDocType` method when working with data from Frappe APIs:
+    
+    ```typescript
+    const response = await fetch('/api/method/frappe.desk.form.load.getdoctype', {
+      method: 'POST',
+      body: JSON.stringify({ doctype: 'Item' })
+    });
+    const data = await response.json();
+    const docType = DocType.fromFrappeDocType(data.docs[0]);
+    ```
+  </Accordion>
+  
+  <Accordion title="Cache DocType Metadata">
+    DocType metadata rarely changes, so cache it to improve performance:
+    
+    ```typescript
+    const docTypeCache = new Map<string, DocType>();
+    
+    async function getDocType(name: string): Promise<DocType> {
+      if (docTypeCache.has(name)) {
+        return docTypeCache.get(name)!;
+      }
+      const docType = await fetchDocType(name);
+      docTypeCache.set(name, docType);
+      return docType;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Validate Before Operations">
+    Check DocType properties before performing operations:
+    
+    ```typescript
+    function canDeleteDocument(docType: DocType, docStatus: number): boolean {
+      if (docType.isSubmittable && docStatus === 1) {
+        return false; // Cannot delete submitted documents
+      }
+      return true;
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## FrappeDocType Interface
+
+The `FrappeDocType` interface represents the raw structure returned by Frappe. Key properties include:
+
+<ResponseField name="name" type="string">
+  The DocType name
+</ResponseField>
+
+<ResponseField name="issingle" type="0 | 1">
+  Whether it's a single document type (0 = no, 1 = yes)
+</ResponseField>
+
+<ResponseField name="istable" type="0 | 1">
+  Whether it can be used as a child table
+</ResponseField>
+
+<ResponseField name="is_submittable" type="0 | 1">
+  Whether documents can be submitted
+</ResponseField>
+
+<ResponseField name="fields" type="FrappeDocField[]">
+  Array of field definitions
+</ResponseField>
+
+<ResponseField name="_fields" type="FrappeDocField[]">
+  Array of disabled/hidden fields
+</ResponseField>
+
+<ResponseField name="permissions" type="FrappeDocPerm[]">
+  Array of permission rules
+</ResponseField>
+
+## Related Classes
+
+<CardGroup cols={2}>
+  <Card title="RenovationDocument" icon="file" href="/api/document">
+    Learn about the core document class
+  </Card>
+  
+  <Card title="DocField" icon="input-text" href="/api/docfield">
+    Explore field definitions and properties
+  </Card>
+</CardGroup>
+
+## Source Reference
+
+Location: `~/workspace/source/src/model/doctype.ts:8`

@@ -1,0 +1,433 @@
+---
+title: Utils API
+description: Core utilities and helper functions for Renovation Core SDK
+---
+
+## Overview
+
+The utilities module provides essential helper functions, logging utilities, JSON manipulation, string formatting, and date utilities used throughout the Renovation Core SDK.
+
+## RenovationUtils Interface
+
+The main interface that encapsulates utility methods available on the core instance.
+
+<ResponseField name="getJSON" type="(s: string) => object">
+  Parses a JSON string to an object
+</ResponseField>
+
+<ResponseField name="datetime" type="object">
+  Date utility methods for date manipulation and formatting
+  
+  <Expandable title="datetime methods">
+    <ResponseField name="getToday" type="() => string">
+      Returns today's date in YYYY-MM-DD format
+    </ResponseField>
+    
+    <ResponseField name="addDays" type="(date, days: number) => string">
+      Adds days to a date and returns formatted string
+    </ResponseField>
+    
+    <ResponseField name="addMonths" type="(date, months: number) => string">
+      Adds months to a date and returns formatted string
+    </ResponseField>
+    
+    <ResponseField name="format" type="(date) => string">
+      Formats a date object to string
+    </ResponseField>
+    
+    <ResponseField name="distanceInWordsToNow" type="(date) => string">
+      Returns human-readable distance from now (e.g., "2 hours ago")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## JSON Utilities
+
+### getJSON
+
+Parses a JSON string to an object with error handling.
+
+<ParamField path="s" type="string" required>
+  The stringified JSON object to parse
+</ParamField>
+
+<ResponseField name="return" type="any">
+  The parsed object, or `null` if parsing fails
+</ResponseField>
+
+<Note>
+  - If input is `null`, returns `null`
+  - If input is already an object, returns it as-is
+  - If string is malformed, returns `null` instead of throwing
+</Note>
+
+```typescript
+import { getJSON } from "@renovation/core";
+
+const jsonString = '{"name":"John","age":30}';
+const obj = getJSON(jsonString);
+console.log(obj); // { name: "John", age: 30 }
+
+// Safe parsing - returns null on error
+const invalid = getJSON("not valid json");
+console.log(invalid); // null
+
+// Already an object - returns as-is
+const existing = getJSON({ foo: "bar" });
+console.log(existing); // { foo: "bar" }
+```
+
+### deepCloneObject
+
+Clones an object by value, not by reference.
+
+<ParamField path="obj" type="T" required>
+  Object to be cloned
+</ParamField>
+
+<ResponseField name="return" type="T">
+  The deeply cloned object
+</ResponseField>
+
+```typescript
+import { deepCloneObject } from "@renovation/core";
+
+const original = { name: "John", address: { city: "NYC" } };
+const clone = deepCloneObject(original);
+
+clone.address.city = "LA";
+console.log(original.address.city); // "NYC" (unchanged)
+console.log(clone.address.city); // "LA"
+```
+
+### deepCompare
+
+Compares multiple objects for deep equality by value, not reference.
+
+<ParamField path="args" type="...any[]" required>
+  List of objects to compare
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if all objects are deeply equal, `false` otherwise
+</ResponseField>
+
+```typescript
+import { deepCompare } from "@renovation/core";
+
+const obj1 = { name: "John", age: 30 };
+const obj2 = { name: "John", age: 30 };
+const obj3 = { name: "Jane", age: 25 };
+
+console.log(deepCompare(obj1, obj2)); // true
+console.log(deepCompare(obj1, obj2, obj3)); // false
+```
+
+## Async Utilities
+
+### asyncSleep
+
+Returns a promise that resolves after a specified time.
+
+<ParamField path="t" type="number" required>
+  Time to wait in milliseconds
+</ParamField>
+
+<ResponseField name="return" type="Promise<null>">
+  An empty promise for awaiting
+</ResponseField>
+
+```typescript
+import { asyncSleep } from "@renovation/core";
+
+async function delayedOperation() {
+  console.log("Starting...");
+  await asyncSleep(2000); // Wait 2 seconds
+  console.log("Done!");
+}
+
+// Use in loops
+for (const item of items) {
+  await processItem(item);
+  await asyncSleep(100); // 100ms delay between items
+}
+```
+
+## Logging Utilities
+
+Built-in debug loggers for different severity levels.
+
+<ResponseField name="renovationLog" type="debug.Debugger">
+  General purpose logger for informational messages
+</ResponseField>
+
+<ResponseField name="renovationWarn" type="debug.Debugger">
+  Logger for warning messages
+</ResponseField>
+
+<ResponseField name="renovationError" type="debug.Debugger">
+  Logger for error messages
+</ResponseField>
+
+```typescript
+import { 
+  renovationLog, 
+  renovationWarn, 
+  renovationError 
+} from "@renovation/core";
+
+// Enable logging with DEBUG environment variable
+// DEBUG=renovation-core-* node app.js
+
+renovationLog("User logged in successfully");
+renovationWarn("API rate limit approaching");
+renovationError("Failed to connect to database", error);
+```
+
+<Info>
+  These loggers use the `debug` package. Enable them by setting the `DEBUG` environment variable:
+  - `DEBUG=renovation-core-log` - Show only logs
+  - `DEBUG=renovation-core-*` - Show all messages
+</Info>
+
+## Date Utilities
+
+Date manipulation and formatting utilities built on `date-fns`.
+
+### getToday
+
+Returns today's date in YYYY-MM-DD format.
+
+<ResponseField name="return" type="string">
+  Today's date formatted as YYYY-MM-DD
+</ResponseField>
+
+```typescript
+import { getToday } from "@renovation/core";
+
+const today = getToday();
+console.log(today); // "2024-03-15"
+```
+
+### addDays
+
+Adds days to a date and returns formatted string.
+
+<ParamField path="date" type="Date | string" required>
+  Date object or date string
+</ParamField>
+
+<ParamField path="days" type="number" required>
+  Number of days to add (can be negative)
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted date string in YYYY-MM-DD format
+</ResponseField>
+
+```typescript
+import { addDays } from "@renovation/core";
+
+const tomorrow = addDays(new Date(), 1);
+const nextWeek = addDays("2024-03-15", 7);
+const lastWeek = addDays("2024-03-15", -7);
+
+console.log(tomorrow); // "2024-03-16"
+console.log(nextWeek); // "2024-03-22"
+```
+
+### addMonths
+
+Adds months to a date and returns formatted string.
+
+<ParamField path="date" type="Date | string" required>
+  Date object or date string
+</ParamField>
+
+<ParamField path="months" type="number" required>
+  Number of months to add (can be negative)
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted date string in YYYY-MM-DD format
+</ResponseField>
+
+```typescript
+import { addMonths } from "@renovation/core";
+
+const nextMonth = addMonths(new Date(), 1);
+const nextYear = addMonths("2024-03-15", 12);
+const lastQuarter = addMonths("2024-03-15", -3);
+
+console.log(nextMonth); // "2024-04-15"
+```
+
+### format
+
+Formats a date using date-fns format function.
+
+<ParamField path="date" type="Date" required>
+  Date object to format
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted date string
+</ResponseField>
+
+```typescript
+import { format } from "@renovation/core";
+
+const formatted = format(new Date(), "YYYY-MM-DD HH:mm:ss");
+console.log(formatted); // "2024-03-15 14:30:00"
+```
+
+### distanceInWordsToNow
+
+Returns human-readable time distance from now.
+
+<ParamField path="date" type="Date | string" required>
+  Date to calculate distance from
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Human-readable distance (e.g., "2 hours ago")
+</ResponseField>
+
+```typescript
+import { distanceInWordsToNow } from "@renovation/core";
+
+const past = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2 hours ago
+const distance = distanceInWordsToNow(past);
+console.log(distance); // "about 2 hours"
+```
+
+## String Utilities
+
+String manipulation and formatting functions.
+
+### toTitleCase
+
+Converts a string to Title Case.
+
+<ParamField path="s" type="string" required>
+  String to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Title cased string
+</ResponseField>
+
+```typescript
+import { toTitleCase } from "@renovation/core";
+
+console.log(toTitleCase("hello world")); // "Hello World"
+console.log(toTitleCase("hello_world")); // "Hello_world"
+```
+
+### underScoreToCamel
+
+Converts underscore_case to camelCase.
+
+<ParamField path="s" type="string" required>
+  Underscore case string
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Camel cased string
+</ResponseField>
+
+```typescript
+import { underScoreToCamel } from "@renovation/core";
+
+console.log(underScoreToCamel("hello_world")); // "helloWorld"
+console.log(underScoreToCamel("first_name")); // "firstName"
+```
+
+### underScoreToTitle
+
+Converts underscore_case to Title Case with spaces.
+
+<ParamField path="s" type="string" required>
+  Underscore case string
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Title cased string with spaces
+</ResponseField>
+
+```typescript
+import { underScoreToTitle } from "@renovation/core";
+
+console.log(underScoreToTitle("hello_world")); // "Hello World"
+console.log(underScoreToTitle("first_name")); // "First Name"
+```
+
+## Environment Detection
+
+### isBrowser
+
+Checks if code is running in a browser environment.
+
+<ResponseField name="return" type="boolean">
+  `true` if running in browser, `false` otherwise
+</ResponseField>
+
+### isNodeJS
+
+Checks if code is running in Node.js environment.
+
+<ResponseField name="return" type="boolean">
+  `true` if running in Node.js, `false` otherwise
+</ResponseField>
+
+```typescript
+import { isBrowser, isNodeJS } from "@renovation/core";
+
+if (isBrowser()) {
+  console.log("Running in browser");
+  // Use localStorage, window, etc.
+} else if (isNodeJS()) {
+  console.log("Running in Node.js");
+  // Use fs, process, etc.
+}
+```
+
+## Complete Usage Example
+
+```typescript
+import { 
+  Renovation,
+  getJSON,
+  asyncSleep,
+  renovationLog,
+  deepCloneObject,
+  addDays,
+  getToday,
+  underScoreToTitle
+} from "@renovation/core";
+
+const renovation = new Renovation();
+await renovation.init("https://example.com");
+
+// Use date utilities
+const today = renovation.utils.datetime.getToday();
+const nextWeek = renovation.utils.datetime.addDays(today, 7);
+
+renovationLog("Today:", today);
+renovationLog("Next week:", nextWeek);
+
+// Parse JSON safely
+const config = getJSON(localStorage.getItem("config"));
+
+// Clone objects
+const userCopy = deepCloneObject(user);
+
+// Format strings
+const fieldLabel = underScoreToTitle("customer_name"); // "Customer Name"
+
+// Async operations with delay
+for (const doc of documents) {
+  await renovation.model.save(doc);
+  await asyncSleep(500); // Rate limiting
+}
+```

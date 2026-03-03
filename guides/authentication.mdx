@@ -1,0 +1,370 @@
+---
+title: Authentication Guide
+description: Comprehensive guide to authentication methods in Renovation Core SDK
+---
+
+The Renovation Core SDK provides a robust authentication system with multiple login methods, session management, and password reset functionality.
+
+## Login Methods
+
+### Email and Password Login
+
+The most common authentication method using email and password credentials.
+
+<CodeGroup>
+```typescript Login with Email/Password
+import { Renovation } from 'renovation-core';
+
+const core = new Renovation();
+core.init({ hostUrl: 'https://your-frappe-site.com' });
+
+// Login with email and password
+const response = await core.auth.login({
+  email: 'user@example.com',
+  password: 'secure_password'
+});
+
+if (response.success) {
+  const session = response.data;
+  console.log('Logged in as:', session.currentUser);
+  console.log('User roles:', session.roles);
+} else {
+  console.error('Login failed:', response.error);
+}
+```
+
+```typescript Check Login Status
+// Check if user is currently logged in
+const sessionStatus = await core.auth.checkLogin();
+
+if (sessionStatus.success) {
+  console.log('User is logged in:', sessionStatus.data.currentUser);
+} else {
+  console.log('User is not logged in');
+}
+```
+</CodeGroup>
+
+<Note>
+The SDK automatically manages session cookies and JWT tokens. You can enable JWT authentication by setting `useJWT: true` during initialization.
+</Note>
+
+### OTP (One-Time Password) Login
+
+Authenticate users via SMS or email OTP for passwordless login.
+
+<Steps>
+  <Step title="Generate OTP">
+    Send an OTP to the user's mobile number:
+    
+    ```typescript
+    const otpResponse = await core.auth.sendOTP({
+      mobile: '+1234567890',
+      newOTP: true  // Generate a fresh OTP
+    });
+    
+    if (otpResponse.success) {
+      console.log('OTP sent to:', otpResponse.data.mobile);
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify OTP">
+    Verify the OTP and optionally log in the user:
+    
+    ```typescript
+    const verifyResponse = await core.auth.verifyOTP({
+      mobile: '+1234567890',
+      OTP: '123456',
+      loginToUser: true  // Auto-login after verification
+    });
+    
+    if (verifyResponse.success && verifyResponse.data.status === 'verified') {
+      console.log('User logged in successfully');
+    } else {
+      console.error('Invalid OTP');
+    }
+    ```
+  </Step>
+</Steps>
+
+### PIN Login (Quick Login)
+
+For repeat users, PIN login provides a faster authentication method.
+
+```typescript PIN Login
+const pinResponse = await core.auth.pinLogin({
+  user: 'user@example.com',
+  pin: '1234'
+});
+
+if (pinResponse.success) {
+  console.log('Quick login successful');
+} else {
+  console.error('Invalid PIN or expired');
+}
+```
+
+<Warning>
+PIN login has a time window. If the window expires, users must log in with full credentials.
+</Warning>
+
+### Social Login
+
+Authenticate using Google or Apple OAuth.
+
+<Tabs>
+  <Tab title="Google Login">
+    ```typescript
+    const googleResponse = await core.auth.loginViaGoogle({
+      code: 'auth_code_from_google',
+      state: 'optional_jwt_or_base64_data'
+    });
+    
+    if (googleResponse.success) {
+      console.log('Google login successful');
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Apple Login">
+    ```typescript
+    const appleResponse = await core.auth.loginViaApple({
+      code: 'auth_code_from_apple',
+      option: 'native',  // 'native' | 'web' | 'android'
+      state: 'optional_jwt_or_base64_data'
+    });
+    
+    if (appleResponse.success) {
+      console.log('Apple login successful');
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Password Reset Flow
+
+Implement a complete password reset workflow for users who forget their passwords.
+
+<Steps>
+  <Step title="Get Reset Info">
+    Check available password reset methods for a user:
+    
+    ```typescript
+    const resetInfo = await core.auth.getPasswordResetInfo({
+      type: 'email',  // 'email' | 'mobile'
+      id: 'user@example.com'
+    });
+    
+    if (resetInfo.success) {
+      console.log('Available mediums:', resetInfo.data.medium);
+      console.log('Hints:', resetInfo.data.hints);
+    }
+    ```
+  </Step>
+  
+  <Step title="Generate Reset OTP">
+    Send a password reset OTP via the chosen medium:
+    
+    ```typescript
+    const generateResponse = await core.auth.generatePasswordResetOTP({
+      type: 'email',
+      id: 'user@example.com',
+      medium_type: 'email',
+      medium_id: 'user@example.com'
+    });
+    
+    if (generateResponse.success && generateResponse.data.sent) {
+      console.log('Reset OTP sent successfully');
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify Reset OTP">
+    Verify the OTP to receive a reset token:
+    
+    ```typescript
+    const verifyResponse = await core.auth.verifyPasswordResetOTP({
+      type: 'email',
+      id: 'user@example.com',
+      medium_type: 'email',
+      medium_id: 'user@example.com',
+      otp: '123456'
+    });
+    
+    if (verifyResponse.success && verifyResponse.data.verified) {
+      const resetToken = verifyResponse.data.reset_token;
+      // Store this token for the final step
+    }
+    ```
+  </Step>
+  
+  <Step title="Update Password">
+    Set the new password using the reset token:
+    
+    ```typescript
+    const updateResponse = await core.auth.updatePasswordWithToken({
+      reset_token: resetToken,
+      new_password: 'new_secure_password'
+    });
+    
+    if (updateResponse.success && updateResponse.data.updated) {
+      console.log('Password updated successfully');
+    }
+    ```
+  </Step>
+</Steps>
+
+## Password Management
+
+### Change Password
+
+Allow logged-in users to change their password:
+
+```typescript Change Password
+const changeResponse = await core.auth.changePassword({
+  old_password: 'current_password',
+  new_password: 'new_secure_password'
+});
+
+if (changeResponse.success) {
+  console.log('Password changed successfully');
+} else {
+  console.error('Failed to change password');
+}
+```
+
+### Estimate Password Strength
+
+Validate password strength using the zxcvbn library:
+
+```typescript Password Strength
+const result = core.auth.estimatePassword({
+  password: 'user_password',
+  user_inputs: {
+    email: 'user@example.com',
+    firstName: 'John',
+    lastName: 'Doe'
+  }
+});
+
+console.log('Password score:', result.score);  // 0-4
+console.log('Feedback:', result.feedback);
+```
+
+<Note>
+Password scores:
+- **0**: Too guessable (< 10³ guesses)
+- **1**: Very guessable (< 10⁶ guesses)
+- **2**: Somewhat guessable (< 10⁸ guesses)
+- **3**: Safely unguessable (< 10¹⁰ guesses)
+- **4**: Very unguessable (≥ 10¹⁰ guesses)
+</Note>
+
+## Session Management
+
+### Monitor Session Status
+
+Subscribe to session changes in real-time:
+
+```typescript Session Monitoring
+import { SessionStatus } from 'renovation-core';
+
+// Subscribe to session updates
+SessionStatus.subscribe((session) => {
+  if (session.loggedIn) {
+    console.log('User logged in:', session.currentUser);
+    console.log('Language:', session.lang);
+  } else {
+    console.log('User logged out');
+  }
+  
+  if (session.session_expired) {
+    // Handle session expiration
+    console.warn('Session expired, please re-login');
+  }
+});
+```
+
+### Get Current User Info
+
+```typescript User Information
+// Get current user name
+const currentUser = core.auth.getCurrentUser();
+console.log('Current user:', currentUser);
+
+// Get current user roles
+const rolesResponse = await core.auth.getCurrentUserRoles();
+if (rolesResponse.success) {
+  console.log('User roles:', rolesResponse.data);
+}
+
+// Get JWT token (if enabled)
+const token = core.auth.getCurrentToken();
+if (token) {
+  console.log('JWT Token:', token);
+}
+```
+
+### Logout
+
+End the current user session:
+
+```typescript Logout
+const logoutResponse = await core.auth.logout();
+
+if (logoutResponse.success) {
+  console.log('Logged out successfully');
+  // Redirect to login page or update UI
+}
+```
+
+### Set Language
+
+Update the user's preferred language:
+
+```typescript Language Preference
+const success = await core.auth.setUserLanguage('ar');
+
+if (success) {
+  console.log('Language updated to Arabic');
+  // Language is automatically reflected in SessionStatus
+}
+```
+
+## External Session Management
+
+For scenarios where authentication happens outside the SDK:
+
+```typescript External Session
+const sessionInfo = {
+  user: 'user@example.com',
+  token: 'jwt_token_from_external_auth',
+  loggedIn: true,
+  currentUser: 'user@example.com'
+};
+
+const response = await core.auth.setExternalSession(sessionInfo);
+
+if (response.success) {
+  console.log('External session set successfully');
+}
+```
+
+## Best Practices
+
+1. **Enable JWT for mobile apps**: Use JWT tokens for stateless authentication in mobile applications.
+
+2. **Handle session expiration**: Always listen to `SessionStatus` for session expiration events.
+
+3. **Secure password policies**: Use `estimatePassword()` to enforce strong passwords.
+
+4. **Clear cache on logout**: The SDK automatically clears cache on logout, but ensure your app state is also cleared.
+
+5. **Error handling**: Always check `response.success` and handle errors appropriately.
+
+## Related Resources
+
+- [Auth Controller API](/api/auth-controller)
+- [Error Handling](/core/error-handling)
+- [Document Operations](/guides/document-operations)

@@ -1,0 +1,1055 @@
+---
+title: 'ModelController'
+description: 'Complete API reference for document CRUD operations in Renovation Core SDK'
+---
+
+## Overview
+
+The `ModelController` handles all document CRUD operations including creating, reading, updating, deleting documents, managing tags, assignments, and searching.
+
+## Document Creation
+
+### newDoc()
+
+Creates a new document with default properties and adds it to the local cache.
+
+```typescript
+const doc = await core.model.newDoc({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="newDocParams" type="NewDocParams" required>
+  Document creation parameters
+  <Expandable title="NewDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      The doctype to create
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="RenovationDocument">
+  New document with default fields:
+  - `docstatus`: 0
+  - `__islocal`: 1
+  - `__unsaved`: 1
+</ResponseField>
+
+### copyDoc()
+
+Clones a document with a new local name.
+
+```typescript
+const copiedDoc = await core.model.copyDoc({
+  doc: originalDoc
+});
+```
+
+<ParamField path="copyDocParams" type="CopyDocParams" required>
+  Copy parameters
+  <Expandable title="CopyDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to clone
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="RenovationDocument">
+  Cloned document with new name
+</ResponseField>
+
+### amendDoc()
+
+Clones a document and sets the `amended_from` property.
+
+```typescript
+const amendedDoc = await core.model.amendDoc({
+  doc: originalDoc
+});
+```
+
+<ParamField path="amendDocParams" type="AmendDocParams" required>
+  Amend parameters
+  <Expandable title="AmendDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to amend
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="RenovationDocument">
+  Cloned document with `amended_from` field set
+</ResponseField>
+
+### addChildDoc()
+
+Adds a child document to a parent document's table field.
+
+```typescript
+const childDoc = await core.model.addChildDoc({
+  doc: parentDoc,
+  field: 'items'
+});
+```
+
+<ParamField path="addChildDocParams" type="AddChildDocParams" required>
+  Child document parameters
+  <Expandable title="AddChildDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Parent document
+    </ParamField>
+    <ParamField path="field" type="string | DocField" required>
+      Table field name or DocField object
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="RenovationDocument">
+  Child document with parent references set
+</ResponseField>
+
+## Document Retrieval
+
+### getDoc()
+
+Retrieves a document from cache or backend.
+
+```typescript
+const response = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="getDocParams" type="GetDocParams" required>
+  Document retrieval parameters
+  <Expandable title="GetDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="forceFetch" type="boolean">
+      Force fetch from backend even if cached. Default: false
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Retrieved document
+</ResponseField>
+
+### getList()
+
+Retrieves a list of documents with filtering and pagination.
+
+```typescript
+const response = await core.model.getList({
+  doctype: 'Sales Invoice',
+  fields: ['name', 'customer', 'total'],
+  filters: { status: 'Draft' },
+  orderBy: 'creation desc',
+  limitPageStart: 0,
+  limitPageLength: 20
+});
+```
+
+<ParamField path="getListParams" type="GetListParams" required>
+  List retrieval parameters
+  <Expandable title="GetListParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="fields" type="string[]">
+      Fields to include. Default: `['name']`. Use `['*']` for all fields
+    </ParamField>
+    <ParamField path="filters" type="DBFilter">
+      Filter conditions
+    </ParamField>
+    <ParamField path="orderBy" type="string">
+      Sort order. Default: 'modified desc'
+    </ParamField>
+    <ParamField path="limitPageStart" type="number">
+      Pagination offset. Default: 0
+    </ParamField>
+    <ParamField path="limitPageLength" type="number">
+      Number of records. Default: 99
+    </ParamField>
+    <ParamField path="parent" type="string">
+      Parent doctype for child tables
+    </ParamField>
+    <ParamField path="tableFields" type="object">
+      Child table fields to include `{ 'items': ['item_code', 'qty'] }`
+    </ParamField>
+    <ParamField path="withLinkFields" type="string[]">
+      Link fields to populate
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="Array<object | RenovationDocument>">
+  List of documents. Returns `RenovationDocument[]` if `fields: ['*']`
+</ResponseField>
+
+<Note>
+The `tableFields` and `withLinkFields` parameters require the `renovation_core` app.
+</Note>
+
+### getValue()
+
+Retrieves a single field value from a document.
+
+```typescript
+const response = await core.model.getValue({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001',
+  docfield: 'total'
+});
+```
+
+<ParamField path="getValueParams" type="GetValueParams" required>
+  Value retrieval parameters
+  <Expandable title="GetValueParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="docfield" type="string" required>
+      Field name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="{ [fieldname]: value }">
+  Object with field name and value
+</ResponseField>
+
+## Document Modification
+
+### saveDoc()
+
+Saves a document to the backend.
+
+```typescript
+const response = await core.model.saveDoc({
+  doc: document
+});
+```
+
+<ParamField path="saveDocParams" type="SaveDocParams" required>
+  Save parameters
+  <Expandable title="SaveDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to save
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Saved document with updated fields
+</ResponseField>
+
+<Warning>
+Returns failure if document name already exists (duplicate entry error).
+</Warning>
+
+### setValue()
+
+Sets a single field value and saves to backend.
+
+```typescript
+const response = await core.model.setValue({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001',
+  docfield: 'status',
+  value: 'Paid'
+});
+```
+
+<ParamField path="setValueParams" type="SetValueParams" required>
+  Set value parameters
+  <Expandable title="SetValueParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="docfield" type="string" required>
+      Field name
+    </ParamField>
+    <ParamField path="value" type="DBBasicValues" required>
+      Value to set
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Updated document
+</ResponseField>
+
+### setLocalValue()
+
+Sets a field value locally without saving to backend. Triggers field events.
+
+```typescript
+core.model.setLocalValue({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001',
+  docfield: 'customer',
+  value: 'CUST-001'
+});
+```
+
+<ParamField path="setLocalValueParams" type="SetLocalValueParams" required>
+  Local value parameters
+  <Expandable title="SetLocalValueParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="docfield" type="string" required>
+      Field name
+    </ParamField>
+    <ParamField path="value" type="DBBasicValues" required>
+      Value to set
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<Note>
+This method triggers field change events and updates the UI.
+</Note>
+
+### submitDoc()
+
+Submits a submittable document.
+
+```typescript
+const response = await core.model.submitDoc({
+  doc: document
+});
+```
+
+<ParamField path="submitDocParams" type="SubmitDocParams" required>
+  Submit parameters
+  <Expandable title="SubmitDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to submit
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Submitted document with `docstatus: 1`
+</ResponseField>
+
+### saveSubmitDoc()
+
+Saves and submits a document in a single database transaction.
+
+```typescript
+const response = await core.model.saveSubmitDoc({
+  doc: document
+});
+```
+
+<ParamField path="saveSubmitDocParams" type="SaveSubmitDocParams" required>
+  Save and submit parameters
+  <Expandable title="SaveSubmitDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to save and submit
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Saved and submitted document
+</ResponseField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+### cancelDoc()
+
+Cancels a submitted document.
+
+```typescript
+const response = await core.model.cancelDoc({
+  doc: document
+});
+```
+
+<ParamField path="cancelDocParams" type="CancelDocParams" required>
+  Cancel parameters
+  <Expandable title="CancelDocParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to cancel
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="RenovationDocument">
+  Cancelled document with `docstatus: 2`
+</ResponseField>
+
+### deleteDoc()
+
+Deletes a document from the backend and local cache.
+
+```typescript
+const response = await core.model.deleteDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="deleteDocParams" type="DeleteDocParams" required>
+  Delete parameters
+  <Expandable title="DeleteDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="string | null">
+  Returns null on success
+</ResponseField>
+
+## Search & Reports
+
+### searchLink()
+
+Searches for link field values.
+
+```typescript
+const response = await core.model.searchLink({
+  doctype: 'Customer',
+  txt: 'John',
+  options: {
+    query: 'custom_query',
+    filters: { territory: 'North' }
+  }
+});
+```
+
+<ParamField path="searchLinkParams" type="SearchLinkParams" required>
+  Search parameters
+  <Expandable title="SearchLinkParams properties">
+    <ParamField path="doctype" type="string" required>
+      Doctype to search
+    </ParamField>
+    <ParamField path="txt" type="string" required>
+      Search term
+    </ParamField>
+    <ParamField path="options" type="object">
+      Additional search options
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="SearchLinkResponse[]">
+  Search results
+  <Expandable title="SearchLinkResponse properties">
+    <ResponseField name="value" type="string">
+      Document name
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Document description
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### getReport()
+
+Retrieves report data with filters.
+
+```typescript
+const response = await core.model.getReport({
+  report: 'Sales Analytics',
+  filters: {
+    from_date: '2023-01-01',
+    to_date: '2023-12-31'
+  },
+  user: 'user@example.com'
+});
+```
+
+<ParamField path="getReportParams" type="GetReportParams" required>
+  Report parameters
+  <Expandable title="GetReportParams properties">
+    <ParamField path="report" type="string" required>
+      Report name
+    </ParamField>
+    <ParamField path="filters" type="object" required>
+      Report filters
+    </ParamField>
+    <ParamField path="user" type="string">
+      User context for the report
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="{ result: any; columns: any }">
+  Report data with columns and results
+</ResponseField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+### exportReport()
+
+Exports a report to Excel or PDF format.
+
+```typescript
+const response = await core.model.exportReport({
+  reportName: 'Sales Analytics',
+  fileFormatType: 'Excel',
+  filters: { from_date: '2023-01-01' },
+  visibleIDX: [0, 1, 2, 3],
+  includeIndentation: 0
+});
+```
+
+<ParamField path="exportReportParams" type="GetExportReportParams" required>
+  Export parameters
+  <Expandable title="GetExportReportParams properties">
+    <ParamField path="reportName" type="string" required>
+      Report name
+    </ParamField>
+    <ParamField path="fileFormatType" type="'Excel' | 'PDF'">
+      Export format. Default: 'Excel'
+    </ParamField>
+    <ParamField path="filters" type="DBFilter">
+      Report filters
+    </ParamField>
+    <ParamField path="visibleIDX" type="number[]" required>
+      Column indices to include
+    </ParamField>
+    <ParamField path="includeIndentation" type="number">
+      Indentation level. Default: 0
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="Blob">
+  Binary file data
+</ResponseField>
+
+## Document Assignments
+
+### assignDoc()
+
+Assigns a document to one or more users.
+
+```typescript
+const response = await core.model.assignDoc({
+  doctype: 'Task',
+  docname: 'TASK-001',
+  assignTo: 'user@example.com',
+  description: 'Please review this task',
+  dueDate: '2024-12-31',
+  priority: 'High',
+  notify: true
+});
+```
+
+<ParamField path="assignDocParams" type="AssignDocParams" required>
+  Assignment parameters
+  <Expandable title="AssignDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string">
+      Document name (for single assignment)
+    </ParamField>
+    <ParamField path="docnames" type="string[]">
+      Document names (for bulk assignment)
+    </ParamField>
+    <ParamField path="assignTo" type="string | string[]" required>
+      User(s) to assign to
+    </ParamField>
+    <ParamField path="myself" type="boolean">
+      Assign to current user
+    </ParamField>
+    <ParamField path="description" type="string">
+      Assignment description
+    </ParamField>
+    <ParamField path="dueDate" type="string">
+      Due date (YYYY-MM-DD)
+    </ParamField>
+    <ParamField path="priority" type="'Low' | 'Medium' | 'High'">
+      Assignment priority
+    </ParamField>
+    <ParamField path="notify" type="boolean">
+      Send notification. Default: false
+    </ParamField>
+    <ParamField path="bulkAssign" type="boolean">
+      Use bulk assignment mode
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="any">
+  Assignment result
+</ResponseField>
+
+### completeDocAssignment()
+
+Marks a document assignment as complete.
+
+```typescript
+const response = await core.model.completeDocAssignment({
+  doctype: 'Task',
+  docname: 'TASK-001',
+  assignedTo: 'user@example.com'
+});
+```
+
+<ParamField path="completeDocAssignmentParams" type="CompleteDocAssignmentParams" required>
+  Completion parameters
+  <Expandable title="CompleteDocAssignmentParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="assignedTo" type="string" required>
+      User who was assigned
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### unAssignDoc()
+
+Removes a user from a document assignment.
+
+```typescript
+const response = await core.model.unAssignDoc({
+  doctype: 'Task',
+  docname: 'TASK-001',
+  unAssignFrom: 'user@example.com'
+});
+```
+
+<ParamField path="unAssignDocParams" type="UnAssignDocParams" required>
+  Unassignment parameters
+  <Expandable title="UnAssignDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="unAssignFrom" type="string" required>
+      User to unassign
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+### getDocsAssignedToUser()
+
+Retrieves documents assigned to a specific user.
+
+```typescript
+const response = await core.model.getDocsAssignedToUser({
+  assignedTo: 'user@example.com',
+  doctype: 'Task',
+  status: 'Open'
+});
+```
+
+<ParamField path="getDocsAssignedToUserParams" type="GetDocsAssignedToUserParams" required>
+  Query parameters
+  <Expandable title="GetDocsAssignedToUserParams properties">
+    <ParamField path="assignedTo" type="string">
+      User to query. Default: current user
+    </ParamField>
+    <ParamField path="doctype" type="string">
+      Filter by doctype
+    </ParamField>
+    <ParamField path="status" type="'Open' | 'Closed'">
+      Assignment status. Default: 'Open'
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="GetDocsAssignedToUserResponse[]">
+  List of assignments
+  <Expandable title="GetDocsAssignedToUserResponse properties">
+    <ResponseField name="doctype" type="string">
+      Document type
+    </ResponseField>
+    <ResponseField name="docname" type="string">
+      Document name
+    </ResponseField>
+    <ResponseField name="dueDate" type="string">
+      Due date
+    </ResponseField>
+    <ResponseField name="status" type="'Open' | 'Closed'">
+      Assignment status
+    </ResponseField>
+    <ResponseField name="assignedBy" type="string">
+      User who made the assignment
+    </ResponseField>
+    <ResponseField name="assignedByFullName" type="string">
+      Full name of assigner
+    </ResponseField>
+    <ResponseField name="assignedTo" type="string">
+      Assigned user
+    </ResponseField>
+    <ResponseField name="priority" type="'High' | 'Medium' | 'Low'">
+      Priority level
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Assignment description
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### getUsersAssignedToDoc()
+
+Retrieves users assigned to a specific document.
+
+```typescript
+const response = await core.model.getUsersAssignedToDoc({
+  doctype: 'Task',
+  docname: 'TASK-001'
+});
+```
+
+<ParamField path="getUsersAssignedToDocParams" type="GetUsersAssignedToDocParams" required>
+  Query parameters
+  <Expandable title="GetUsersAssignedToDocParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="GetUsersAssignedToDocResponse[]">
+  List of assigned users
+  <Expandable title="GetUsersAssignedToDocResponse properties">
+    <ResponseField name="assignedTo" type="string">
+      Assigned user
+    </ResponseField>
+    <ResponseField name="assignedBy" type="string">
+      User who assigned
+    </ResponseField>
+    <ResponseField name="assignedByFullName" type="string">
+      Full name of assigner
+    </ResponseField>
+    <ResponseField name="dueDate" type="string">
+      Due date
+    </ResponseField>
+    <ResponseField name="status" type="'Open' | 'Closed'">
+      Status
+    </ResponseField>
+    <ResponseField name="priority" type="'High' | 'Medium' | 'Low'">
+      Priority
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Description
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Document Tags
+
+### addTag()
+
+Adds a tag to a document.
+
+```typescript
+const response = await core.model.addTag({
+  doctype: 'Task',
+  docname: 'TASK-001',
+  tag: 'urgent'
+});
+```
+
+<ParamField path="addTagParams" type="AddTagParams" required>
+  Tag parameters
+  <Expandable title="AddTagParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="tag" type="string" required>
+      Tag to add
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="string">
+  Added tag
+</ResponseField>
+
+### removeTag()
+
+Removes a tag from a document.
+
+```typescript
+const response = await core.model.removeTag({
+  doctype: 'Task',
+  docname: 'TASK-001',
+  tag: 'urgent'
+});
+```
+
+<ParamField path="removeTagParams" type="RemoveTagParams" required>
+  Tag removal parameters
+  <Expandable title="RemoveTagParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+    <ParamField path="tag" type="string" required>
+      Tag to remove
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="null">
+  Returns null on success
+</ResponseField>
+
+### getTags()
+
+Retrieves all tags for a doctype.
+
+```typescript
+const response = await core.model.getTags({
+  doctype: 'Task',
+  likeTag: 'urg%'
+});
+```
+
+<ParamField path="getTagsParams" type="GetTagsParams" required>
+  Tag query parameters
+  <Expandable title="GetTagsParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="likeTag" type="string">
+      SQL LIKE pattern for filtering tags
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="string[]">
+  List of tags
+</ResponseField>
+
+### getTaggedDocs()
+
+Retrieves all documents with a specific tag.
+
+```typescript
+const response = await core.model.getTaggedDocs({
+  doctype: 'Task',
+  tag: 'urgent'
+});
+```
+
+<ParamField path="getTaggedDocsParams" type="GetTaggedDocsParams" required>
+  Tagged docs query parameters
+  <Expandable title="GetTaggedDocsParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="tag" type="string" required>
+      Tag to search for
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="string[]">
+  List of document names
+</ResponseField>
+
+## Local Cache Management
+
+### addToLocals()
+
+Adds a document to the local cache.
+
+```typescript
+core.model.addToLocals({
+  doc: document
+});
+```
+
+<ParamField path="addToLocalsParams" type="AddToLocalsParams" required>
+  Cache parameters
+  <Expandable title="AddToLocalsParams properties">
+    <ParamField path="doc" type="RenovationDocument" required>
+      Document to cache
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### getFromLocals()
+
+Retrieves a document from the local cache.
+
+```typescript
+const doc = core.model.getFromLocals({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="getFromLocalsParams" type="GetFromLocalsParams" required>
+  Cache retrieval parameters
+  <Expandable title="GetFromLocalsParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="RenovationDocument | null">
+  Cached document or null if not found
+</ResponseField>
+
+### clearCache()
+
+Clears the local document cache and name counters.
+
+```typescript
+core.model.clearCache();
+```
+
+## Code Examples
+
+### Complete CRUD Flow
+
+<CodeGroup>
+```typescript Create and Save
+// Create new document
+const invoice = await core.model.newDoc({
+  doctype: 'Sales Invoice'
+});
+
+// Set values
+invoice.customer = 'CUST-001';
+invoice.posting_date = '2024-01-15';
+
+// Add child items
+const item = await core.model.addChildDoc({
+  doc: invoice,
+  field: 'items'
+});
+item.item_code = 'ITEM-001';
+item.qty = 10;
+
+// Save
+const saveResponse = await core.model.saveDoc({
+  doc: invoice
+});
+
+if (saveResponse.success) {
+  console.log('Saved:', saveResponse.data.name);
+}
+```
+
+```typescript Read and Update
+// Get document
+const response = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+
+if (response.success) {
+  const invoice = response.data;
+  
+  // Update single field
+  const updateResponse = await core.model.setValue({
+    doctype: 'Sales Invoice',
+    docname: 'SI-001',
+    docfield: 'status',
+    value: 'Paid'
+  });
+}
+```
+
+```typescript Submit and Cancel
+// Submit document
+const submitResponse = await core.model.submitDoc({
+  doc: invoice
+});
+
+if (submitResponse.success) {
+  console.log('Submitted with docstatus:', submitResponse.data.docstatus);
+  
+  // Later: cancel if needed
+  const cancelResponse = await core.model.cancelDoc({
+    doc: invoice
+  });
+}
+```
+</CodeGroup>
+
+### List with Filters
+
+```typescript
+const response = await core.model.getList({
+  doctype: 'Sales Invoice',
+  fields: ['name', 'customer', 'total', 'status'],
+  filters: {
+    status: ['in', ['Draft', 'Submitted']],
+    total: ['>', 1000],
+    posting_date: ['between', ['2024-01-01', '2024-12-31']]
+  },
+  orderBy: 'total desc',
+  limitPageStart: 0,
+  limitPageLength: 50
+});
+
+console.log(`Found ${response.data.length} invoices`);
+```
+
+### Working with Child Tables
+
+```typescript
+// Get document with child tables
+const response = await core.model.getList({
+  doctype: 'Sales Invoice',
+  fields: ['*'],
+  tableFields: {
+    'items': ['item_code', 'qty', 'rate', 'amount']
+  }
+});
+
+if (response.success && response.data.length > 0) {
+  const invoice = response.data[0];
+  console.log('Items:', invoice.items);
+}
+```

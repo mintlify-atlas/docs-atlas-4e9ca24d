@@ -1,0 +1,608 @@
+---
+title: 'DocField'
+description: 'Document field metadata class for managing Frappe field structures'
+---
+
+## Overview
+
+`DocField` is a class that contains metadata and properties of a document field in Frappe. It provides helper functions to parse field information from Frappe format and manage field definitions, types, and behavior.
+
+## Class Structure
+
+```typescript
+class DocField {
+  [x: string]: any;
+  
+  static fromFrappeDocField(field: FrappeDocField): DocField
+}
+```
+
+## Static Methods
+
+### fromFrappeDocField(field)
+
+Parses a DocField from Frappe format into a structured `DocField` instance. This method performs transformations including:
+
+<ParamField path="field" type="FrappeDocField" required>
+  The raw Frappe field metadata object containing all field information.
+</ParamField>
+
+<ResponseField name="return" type="DocField">
+  A fully parsed and structured `DocField` instance.
+</ResponseField>
+
+#### Transformations
+
+1. **Boolean Conversion**: Converts Frappe's 0/1 values to true/false for boolean properties
+2. **Naming Convention**: Transforms underscore_case property names to camelCase
+3. **Property Mapping**: Maps all Frappe properties to the DocField instance
+
+## Properties
+
+### Basic Information
+
+<ParamField path="fieldname" type="string" default="''">
+  The unique identifier for the field. This is the technical name used in code and database (e.g., `item_code`, `customer_name`).
+</ParamField>
+
+<ParamField path="label" type="string" default="''">
+  The human-readable label displayed in the UI. For example, `item_name` field would have a label like "Item Name".
+</ParamField>
+
+<ParamField path="fieldtype" type="string" default="''">
+  The type of field as defined in Frappe (e.g., `Data`, `Link`, `Select`, `Text`, `Int`, `Currency`). See [Field Types](#field-types) for complete list.
+</ParamField>
+
+### Field Behavior
+
+<ParamField path="reqd" type="boolean" default="false">
+  Whether the field is mandatory and must be filled before saving the document.
+</ParamField>
+
+<ParamField path="hidden" type="boolean" default="false">
+  Whether the field is hidden from the user interface.
+</ParamField>
+
+<ParamField path="readOnly" type="boolean" default="false">
+  Whether the field is read-only and cannot be edited by users.
+</ParamField>
+
+<ParamField path="collapsible" type="boolean" default="false">
+  Whether the field (typically Section Break) can be collapsed in the UI.
+</ParamField>
+
+<ParamField path="translatable" type="boolean" default="false">
+  Whether the field's content can be translated into different languages.
+</ParamField>
+
+### Display Options
+
+<ParamField path="inListView" type="boolean" default="false">
+  Whether the field should appear as a column in the list view of the doctype.
+</ParamField>
+
+<ParamField path="inStandardFilter" type="boolean" default="false">
+  Whether the field should appear in the default filters (e.g., in list view sidebars).
+</ParamField>
+
+### Field Configuration
+
+<ParamField path="options" type="string" default="''">
+  Field-type specific configuration:
+  - **Link**: Contains the target DocType name
+  - **Select**: Contains newline-separated list of options
+  - **Dynamic Link**: Contains the field that holds the DocType name
+  - **Table**: Contains the child DocType name
+</ParamField>
+
+## Field Types
+
+The `DocFieldTypes` type defines all supported Frappe field types:
+
+### Text & Data
+
+<ResponseField name="Data" type="string">
+  Single-line text input (max 140 characters)
+</ResponseField>
+
+<ResponseField name="Text" type="string">
+  Multi-line text input
+</ResponseField>
+
+<ResponseField name="Small Text" type="string">
+  Smaller multi-line text area
+</ResponseField>
+
+<ResponseField name="Long Text" type="string">
+  Large multi-line text area
+</ResponseField>
+
+<ResponseField name="Text Editor" type="string">
+  Rich text editor with formatting
+</ResponseField>
+
+<ResponseField name="HTML Editor" type="string">
+  HTML editor for formatted content
+</ResponseField>
+
+<ResponseField name="Code" type="string">
+  Code editor with syntax highlighting
+</ResponseField>
+
+### Numbers
+
+<ResponseField name="Int" type="number">
+  Integer number field
+</ResponseField>
+
+<ResponseField name="Float" type="number">
+  Decimal number field
+</ResponseField>
+
+<ResponseField name="Currency" type="number">
+  Currency value with formatting
+</ResponseField>
+
+<ResponseField name="Percent" type="number">
+  Percentage value
+</ResponseField>
+
+### Date & Time
+
+<ResponseField name="Date" type="string">
+  Date picker (YYYY-MM-DD format)
+</ResponseField>
+
+<ResponseField name="Datetime" type="string">
+  Date and time picker
+</ResponseField>
+
+<ResponseField name="Time" type="string">
+  Time picker
+</ResponseField>
+
+### Links & References
+
+<ResponseField name="Link" type="string">
+  Link to another DocType document
+</ResponseField>
+
+<ResponseField name="Dynamic Link" type="string">
+  Link where target DocType is determined dynamically
+</ResponseField>
+
+<ResponseField name="Table" type="Array">
+  Child table containing multiple rows
+</ResponseField>
+
+### UI Elements
+
+<ResponseField name="Check" type="boolean">
+  Checkbox for boolean values
+</ResponseField>
+
+<ResponseField name="Select" type="string">
+  Dropdown with predefined options
+</ResponseField>
+
+<ResponseField name="Button" type="null">
+  Clickable button
+</ResponseField>
+
+<ResponseField name="Section Break" type="null">
+  Visual separator creating sections
+</ResponseField>
+
+<ResponseField name="Column Break" type="null">
+  Creates new column in layout
+</ResponseField>
+
+<ResponseField name="Heading" type="null">
+  Text heading for sections
+</ResponseField>
+
+### Media & Files
+
+<ResponseField name="Attach" type="string">
+  File attachment field
+</ResponseField>
+
+<ResponseField name="Attach Image" type="string">
+  Image file attachment
+</ResponseField>
+
+<ResponseField name="Image" type="string">
+  Image URL display
+</ResponseField>
+
+<ResponseField name="Signature" type="string">
+  Digital signature field
+</ResponseField>
+
+### Special Types
+
+<ResponseField name="Password" type="string">
+  Password input (masked)
+</ResponseField>
+
+<ResponseField name="Color" type="string">
+  Color picker
+</ResponseField>
+
+<ResponseField name="Barcode" type="string">
+  Barcode input/scanner
+</ResponseField>
+
+<ResponseField name="Geolocation" type="string">
+  Geographic coordinates
+</ResponseField>
+
+<ResponseField name="HTML" type="string">
+  Static HTML content
+</ResponseField>
+
+<ResponseField name="Read Only" type="any">
+  Display-only field
+</ResponseField>
+
+## Usage Examples
+
+### Parsing from Frappe Format
+
+```typescript
+import DocField from '@renovationjs/core/model/docfield';
+
+// API response from Frappe
+const frappeField = {
+  fieldname: 'item_code',
+  fieldtype: 'Data',
+  label: 'Item Code',
+  reqd: 1,
+  in_list_view: 1,
+  in_standard_filter: 1,
+  read_only: 0,
+  hidden: 0
+};
+
+// Parse to DocField
+const field = DocField.fromFrappeDocField(frappeField);
+
+console.log(field.fieldname); // 'item_code'
+console.log(field.reqd); // true (converted from 1)
+console.log(field.inListView); // true (from in_list_view: 1)
+console.log(field.readOnly); // false (from read_only: 0)
+```
+
+### Working with Link Fields
+
+```typescript
+// Link field configuration
+const linkField = DocField.fromFrappeDocField({
+  fieldname: 'customer',
+  fieldtype: 'Link',
+  label: 'Customer',
+  options: 'Customer', // Target DocType
+  reqd: 1,
+  in_list_view: 1
+});
+
+if (linkField.fieldtype === 'Link') {
+  console.log(`Links to: ${linkField.options}`);
+  // Output: Links to: Customer
+}
+```
+
+### Working with Select Fields
+
+```typescript
+// Select field with options
+const selectField = DocField.fromFrappeDocField({
+  fieldname: 'status',
+  fieldtype: 'Select',
+  label: 'Status',
+  options: 'Draft\nActive\nInactive\nArchived',
+  reqd: 1
+});
+
+// Parse options
+const options = selectField.options.split('\n');
+console.log('Available options:', options);
+// Output: ['Draft', 'Active', 'Inactive', 'Archived']
+
+// Build select dropdown
+function buildSelectOptions(field: DocField): string[] {
+  if (field.fieldtype === 'Select' && field.options) {
+    return field.options.split('\n').filter(opt => opt.trim());
+  }
+  return [];
+}
+```
+
+### Building Form Inputs
+
+```typescript
+function generateFormInput(field: DocField) {
+  const baseConfig = {
+    name: field.fieldname,
+    label: field.label,
+    required: field.reqd,
+    disabled: field.readOnly,
+    hidden: field.hidden
+  };
+
+  switch (field.fieldtype) {
+    case 'Data':
+    case 'Text':
+      return { ...baseConfig, type: 'text' };
+    
+    case 'Int':
+    case 'Float':
+    case 'Currency':
+      return { ...baseConfig, type: 'number' };
+    
+    case 'Date':
+      return { ...baseConfig, type: 'date' };
+    
+    case 'Check':
+      return { ...baseConfig, type: 'checkbox' };
+    
+    case 'Select':
+      return {
+        ...baseConfig,
+        type: 'select',
+        options: field.options.split('\n')
+      };
+    
+    case 'Link':
+      return {
+        ...baseConfig,
+        type: 'autocomplete',
+        doctype: field.options
+      };
+    
+    default:
+      return { ...baseConfig, type: 'text' };
+  }
+}
+
+const inputConfig = generateFormInput(field);
+```
+
+### Validating Field Values
+
+```typescript
+function validateFieldValue(field: DocField, value: any): boolean {
+  // Check if required field is empty
+  if (field.reqd && !value) {
+    console.error(`${field.label} is required`);
+    return false;
+  }
+
+  // Type-specific validation
+  switch (field.fieldtype) {
+    case 'Int':
+      if (!Number.isInteger(Number(value))) {
+        console.error(`${field.label} must be an integer`);
+        return false;
+      }
+      break;
+    
+    case 'Email':
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        console.error(`${field.label} must be a valid email`);
+        return false;
+      }
+      break;
+    
+    case 'Select':
+      const options = field.options.split('\n');
+      if (!options.includes(value)) {
+        console.error(`${field.label} must be one of: ${options.join(', ')}`);
+        return false;
+      }
+      break;
+  }
+
+  return true;
+}
+```
+
+### Filtering Fields
+
+```typescript
+// Get all required fields
+function getRequiredFields(fields: DocField[]): DocField[] {
+  return fields.filter(field => field.reqd);
+}
+
+// Get visible fields (not hidden)
+function getVisibleFields(fields: DocField[]): DocField[] {
+  return fields.filter(field => !field.hidden);
+}
+
+// Get editable fields (not read-only)
+function getEditableFields(fields: DocField[]): DocField[] {
+  return fields.filter(field => !field.readOnly);
+}
+
+// Get list view columns
+function getListViewColumns(fields: DocField[]): DocField[] {
+  return fields.filter(field => field.inListView);
+}
+
+// Get filter fields
+function getFilterFields(fields: DocField[]): DocField[] {
+  return fields.filter(field => field.inStandardFilter);
+}
+```
+
+### Creating Field Groups
+
+```typescript
+interface FieldGroup {
+  label: string;
+  fields: DocField[];
+}
+
+function organizeFieldsIntoGroups(fields: DocField[]): FieldGroup[] {
+  const groups: FieldGroup[] = [];
+  let currentGroup: FieldGroup = { label: 'Default', fields: [] };
+
+  for (const field of fields) {
+    if (field.fieldtype === 'Section Break') {
+      // Start new section
+      if (currentGroup.fields.length > 0) {
+        groups.push(currentGroup);
+      }
+      currentGroup = {
+        label: field.label || 'Section',
+        fields: []
+      };
+    } else if (field.fieldtype !== 'Column Break') {
+      // Add field to current section
+      currentGroup.fields.push(field);
+    }
+  }
+
+  if (currentGroup.fields.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  return groups;
+}
+```
+
+### Type-Safe Field Access
+
+```typescript
+interface TypedDocField extends DocField {
+  fieldname: string;
+  fieldtype: DocFieldTypes;
+}
+
+function isLinkField(field: DocField): boolean {
+  return field.fieldtype === 'Link';
+}
+
+function isTableField(field: DocField): boolean {
+  return field.fieldtype === 'Table';
+}
+
+function isNumericField(field: DocField): boolean {
+  return ['Int', 'Float', 'Currency', 'Percent'].includes(field.fieldtype);
+}
+
+function isDateField(field: DocField): boolean {
+  return ['Date', 'Datetime', 'Time'].includes(field.fieldtype);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use fromFrappeDocField for API Data">
+    Always parse Frappe API responses using the static method:
+    
+    ```typescript
+    const fields = frappeDocType.fields.map(f => 
+      DocField.fromFrappeDocField(f)
+    );
+    ```
+  </Accordion>
+  
+  <Accordion title="Check Field Type Before Processing">
+    Different field types require different handling:
+    
+    ```typescript
+    if (field.fieldtype === 'Link') {
+      // Handle link field
+      const targetDocType = field.options;
+    } else if (field.fieldtype === 'Select') {
+      // Handle select field
+      const options = field.options.split('\n');
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Respect Field Constraints">
+    Always validate against field properties:
+    
+    ```typescript
+    function canEditField(field: DocField): boolean {
+      return !field.readOnly && !field.hidden;
+    }
+    
+    function validateRequired(field: DocField, value: any): boolean {
+      if (field.reqd && !value) {
+        return false;
+      }
+      return true;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Field Types for UI Components">
+    Map field types to appropriate UI components:
+    
+    ```typescript
+    const componentMap = {
+      'Data': TextInput,
+      'Text': TextArea,
+      'Int': NumberInput,
+      'Check': Checkbox,
+      'Select': Dropdown,
+      'Link': AutoComplete,
+      'Date': DatePicker
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## FrappeDocField Interface
+
+The `FrappeDocField` interface represents the raw structure returned by Frappe. Key properties include:
+
+<ResponseField name="fieldname" type="string">
+  The field identifier
+</ResponseField>
+
+<ResponseField name="fieldtype" type="DocFieldTypes">
+  The field type
+</ResponseField>
+
+<ResponseField name="label" type="string">
+  The display label
+</ResponseField>
+
+<ResponseField name="options" type="string">
+  Field-specific options
+</ResponseField>
+
+<ResponseField name="reqd" type="0 | 1">
+  Whether field is required
+</ResponseField>
+
+<ResponseField name="hidden" type="0 | 1">
+  Whether field is hidden
+</ResponseField>
+
+<ResponseField name="read_only" type="0 | 1">
+  Whether field is read-only
+</ResponseField>
+
+## Related Classes
+
+<CardGroup cols={2}>
+  <Card title="RenovationDocument" icon="file" href="/api/document">
+    Learn about the core document class
+  </Card>
+  
+  <Card title="DocType" icon="database" href="/api/doctype">
+    Explore document type metadata and structure
+  </Card>
+</CardGroup>
+
+## Source Reference
+
+Location: `~/workspace/source/src/model/docfield.ts:13`

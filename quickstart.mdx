@@ -1,80 +1,291 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Renovation Core in minutes
 ---
 
-## Get started in three steps
+# Quick Start
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through the essential steps to start using Renovation Core in your application.
 
-### Step 1: Set up your local environment
+## Initialize Renovation Core
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Import and create instance">
+    Start by importing the Renovation class and creating a new instance:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```typescript
+    import { Renovation } from '@leam-tech/renovation-core';
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    const renovation = new Renovation();
+    ```
+  </Step>
+  
+  <Step title="Initialize with configuration">
+    Initialize Renovation Core with your Frappe backend URL:
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```typescript
+    await renovation.init({
+      hostURL: 'https://your-frappe-site.com',
+      backend: 'frappe'
+    });
+    ```
+    
+    <Note>
+      The `init()` method is async and must be awaited before using any other Renovation Core features.
+    </Note>
+    
+    ### Configuration Options
+    
+    The `init()` method accepts an `InitParams` object with the following properties:
+    
+    - `hostURL` (required): Your Frappe backend URL
+    - `backend` (optional): Backend type, defaults to `'frappe'`
+    - `clientId` (optional): Custom client identifier for HTTP requests
+    - `disableLog` (optional): Set to `true` to disable all logging
+    - `useJWT` (optional): Enable JWT authentication (requires `renovation_core` backend app)
+  </Step>
+  
+  <Step title="Authenticate a user">
+    Log in a user with email and password:
+    
+    ```typescript
+    const loginResponse = await renovation.auth.login({
+      email: 'user@example.com',
+      password: 'secure-password'
+    });
+    
+    if (loginResponse.success) {
+      console.log('Logged in as:', loginResponse.data.full_name);
+      console.log('User roles:', loginResponse.data.roles);
+    } else {
+      console.error('Login failed:', loginResponse.error);
+    }
+    ```
+    
+    <Tip>
+      All Renovation Core methods return a `RequestResponse` object with `success`, `data`, and `error` properties.
+    </Tip>
+  </Step>
+  
+  <Step title="Perform document operations">
+    Once authenticated, you can perform CRUD operations on documents:
+    
+    ### Get a document
+    
+    ```typescript
+    const docResponse = await renovation.model.getDoc({
+      doctype: 'User',
+      docname: 'user@example.com'
+    });
+    
+    if (docResponse.success) {
+      console.log('User data:', docResponse.data);
+    }
+    ```
+    
+    ### Get a list of documents
+    
+    ```typescript
+    const listResponse = await renovation.model.getList({
+      doctype: 'User',
+      fields: ['name', 'email', 'full_name'],
+      filters: [['enabled', '=', 1]],
+      limitPageLength: 10,
+      orderBy: 'creation desc'
+    });
+    
+    if (listResponse.success) {
+      console.log('Users:', listResponse.data);
+    }
+    ```
+    
+    ### Create a new document
+    
+    ```typescript
+    const newDoc = await renovation.model.newDoc({
+      doctype: 'ToDo'
+    });
+    
+    newDoc.description = 'Complete documentation';
+    newDoc.priority = 'High';
+    
+    const saveResponse = await renovation.model.saveDoc({
+      doc: newDoc
+    });
+    
+    if (saveResponse.success) {
+      console.log('Created ToDo:', saveResponse.data.name);
+    }
+    ```
+    
+    ### Update a document
+    
+    ```typescript
+    const todoResponse = await renovation.model.getDoc({
+      doctype: 'ToDo',
+      docname: 'TODO-0001'
+    });
+    
+    if (todoResponse.success) {
+      const todo = todoResponse.data;
+      todo.status = 'Closed';
+      
+      const updateResponse = await renovation.model.saveDoc({
+        doc: todo
+      });
+      
+      if (updateResponse.success) {
+        console.log('Updated ToDo status');
+      }
+    }
+    ```
+    
+    ### Delete a document
+    
+    ```typescript
+    const deleteResponse = await renovation.model.deleteDoc({
+      doctype: 'ToDo',
+      docname: 'TODO-0001'
+    });
+    
+    if (deleteResponse.success) {
+      console.log('Document deleted successfully');
+    }
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Complete Example
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Here's a complete example putting it all together:
 
-### Step 3: Go live
+```typescript app.ts
+import { Renovation } from '@leam-tech/renovation-core';
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+async function main() {
+  // Initialize Renovation Core
+  const renovation = new Renovation();
+  
+  await renovation.init({
+    hostURL: 'https://your-frappe-site.com',
+    backend: 'frappe'
+  });
+  
+  // Login
+  const loginResponse = await renovation.auth.login({
+    email: 'user@example.com',
+    password: 'secure-password'
+  });
+  
+  if (!loginResponse.success) {
+    console.error('Login failed:', loginResponse.error);
+    return;
+  }
+  
+  console.log('Logged in as:', loginResponse.data.full_name);
+  
+  // Create a new ToDo
+  const newTodo = await renovation.model.newDoc({ doctype: 'ToDo' });
+  newTodo.description = 'Learn Renovation Core';
+  newTodo.priority = 'High';
+  
+  const saveResponse = await renovation.model.saveDoc({ doc: newTodo });
+  
+  if (saveResponse.success) {
+    console.log('Created ToDo:', saveResponse.data.name);
+  }
+  
+  // Get list of pending todos
+  const listResponse = await renovation.model.getList({
+    doctype: 'ToDo',
+    fields: ['name', 'description', 'status'],
+    filters: [['status', '=', 'Open']],
+    limitPageLength: 20
+  });
+  
+  if (listResponse.success) {
+    console.log('Pending ToDos:', listResponse.data);
+  }
+  
+  // Logout
+  await renovation.auth.logout();
+  console.log('Logged out successfully');
+}
 
-## Next steps
+main().catch(console.error);
+```
 
-Now that you have your docs running, explore these key features:
+## Understanding Request Responses
+
+All Renovation Core methods return a `RequestResponse<T>` object with the following structure:
+
+```typescript
+interface RequestResponse<T> {
+  success: boolean;        // Whether the request succeeded
+  data: T;                 // Response data (if success is true)
+  error?: RenovationError; // Error details (if success is false)
+  httpCode: number;        // HTTP status code
+  exc?: string;            // Exception message from backend
+}
+```
+
+Always check the `success` property before accessing `data`:
+
+```typescript
+const response = await renovation.model.getDoc({
+  doctype: 'User',
+  docname: 'user@example.com'
+});
+
+if (response.success) {
+  // Safe to access response.data
+  console.log(response.data);
+} else {
+  // Handle error
+  console.error(response.error.title, response.error.info);
+}
+```
+
+## Available Controllers
+
+Renovation Core organizes functionality into specialized controllers:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="AuthController" icon="lock" href="/guides/authentication">
+    Authentication, sessions, and user management
+  </Card>
+  
+  <Card title="ModelController" icon="file" href="/guides/document-operations">
+    Document CRUD operations and queries
+  </Card>
+  
+  <Card title="StorageController" icon="cloud-arrow-up" href="/guides/storage">
+    File uploads and storage management
+  </Card>
+  
+  <Card title="TranslationController" icon="globe" href="/guides/translations">
+    Internationalization and translations
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Next Steps
+
+Now that you understand the basics, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Authentication Methods" icon="key" href="/guides/authentication">
+    Learn about OTP login, social authentication, and session management
+  </Card>
+  
+  <Card title="Advanced Queries" icon="filter" href="/guides/document-operations">
+    Master filtering, sorting, and complex document operations
+  </Card>
+  
+  <Card title="Real-time Updates" icon="bolt" href="/guides/realtime">
+    Implement live updates with Socket.IO integration
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

@@ -1,0 +1,534 @@
+---
+title: Translations Guide
+description: Complete guide to multi-language support and translation management in Renovation Core SDK
+---
+
+The Renovation Core SDK provides comprehensive internationalization (i18n) support for building multi-language applications.
+
+## Loading Translations
+
+### Load Language Dictionary
+
+Load translations from the Frappe backend:
+
+```typescript Load Translations
+import { Renovation } from 'renovation-core';
+
+const core = new Renovation();
+core.init({ hostUrl: 'https://your-frappe-site.com' });
+
+// Load translations for a specific language
+const response = await core.translate.loadTranslations({
+  lang: 'ar'  // Arabic
+});
+
+if (response.success) {
+  const translations = response.data;
+  console.log('Loaded translations:', Object.keys(translations).length);
+}
+```
+
+<Note>
+Translations are automatically loaded when a user logs in. The language is set based on the user's preference in their profile.
+</Note>
+
+### Load Current User's Language
+
+```typescript Auto-load User Language
+// Login user
+await core.auth.login({
+  email: 'user@example.com',
+  password: 'password'
+});
+
+// Translations are automatically loaded based on user's language preference
+// Access them immediately
+const greeting = core.translate.getMessage({ txt: 'Hello' });
+console.log(greeting);  // Output: "مرحبا" (if user's language is Arabic)
+```
+
+## Getting Translations
+
+### Basic Usage
+
+Get translated messages:
+
+```typescript Get Message
+// Get translation for current language
+const message = core.translate.getMessage({ txt: 'Save' });
+console.log(message);  // Returns translation or original text if not found
+
+// Get translation for specific language
+const arabicMessage = core.translate.getMessage({
+  txt: 'Delete',
+  lang: 'ar'
+});
+console.log(arabicMessage);
+```
+
+### Handling Non-String Values
+
+The `getMessage` method safely handles non-string inputs:
+
+```typescript Safe Translation
+// Returns the input as-is if not a string
+const number = core.translate.getMessage({ txt: 123 });
+console.log(number);  // 123
+
+const nullValue = core.translate.getMessage({ txt: null });
+console.log(nullValue);  // null
+```
+
+## Language Management
+
+### Set Current Language
+
+Change the active language:
+
+```typescript Set Language
+// Set current language
+core.translate.setCurrentLanguage({ lang: 'fr' });
+
+// Get current language
+const currentLang = core.translate.getCurrentLanguage();
+console.log('Current language:', currentLang);  // 'fr'
+```
+
+### Get Current Language
+
+```typescript Get Current Language
+const language = core.translate.getCurrentLanguage();
+console.log('Active language:', language);
+```
+
+## Managing Translation Dictionary
+
+### Set Custom Translations
+
+Overwrite the translation dictionary:
+
+```typescript Set Dictionary
+const customTranslations = {
+  'Hello': 'Bonjour',
+  'Goodbye': 'Au revoir',
+  'Thank you': 'Merci'
+};
+
+core.translate.setMessagesDict({
+  dict: customTranslations,
+  lang: 'fr'
+});
+
+// Use translations
+const greeting = core.translate.getMessage({ txt: 'Hello', lang: 'fr' });
+console.log(greeting);  // 'Bonjour'
+```
+
+### Extend Translation Dictionary
+
+Add translations without overwriting existing ones:
+
+```typescript Extend Dictionary
+const additionalTranslations = {
+  'Welcome': 'Bienvenue',
+  'Login': 'Connexion'
+};
+
+core.translate.extendDictionary({
+  dict: additionalTranslations,
+  lang: 'fr'
+});
+
+// All translations are now available
+const welcome = core.translate.getMessage({ txt: 'Welcome', lang: 'fr' });
+console.log(welcome);  // 'Bienvenue'
+
+const hello = core.translate.getMessage({ txt: 'Hello', lang: 'fr' });
+console.log(hello);  // 'Bonjour' (from previous set)
+```
+
+## Practical Examples
+
+### Multi-Language UI Component
+
+Build a language-aware UI component:
+
+```typescript Translatable Component
+class TranslatableButton {
+  private element: HTMLButtonElement;
+  
+  constructor(
+    private core: Renovation,
+    private textKey: string,
+    private onClick: () => void
+  ) {
+    this.element = document.createElement('button');
+    this.element.addEventListener('click', onClick);
+    this.updateText();
+  }
+  
+  updateText() {
+    const translatedText = this.core.translate.getMessage({
+      txt: this.textKey
+    });
+    this.element.textContent = translatedText;
+  }
+  
+  render(): HTMLButtonElement {
+    return this.element;
+  }
+}
+
+// Usage
+const saveButton = new TranslatableButton(
+  core,
+  'Save',
+  () => console.log('Saved!')
+);
+
+document.body.appendChild(saveButton.render());
+
+// Update language
+core.translate.setCurrentLanguage({ lang: 'ar' });
+saveButton.updateText();  // Button text updates to Arabic
+```
+
+### Language Switcher
+
+Create a language switching interface:
+
+```typescript Language Switcher
+class LanguageSwitcher {
+  private languages = [
+    { code: 'en', name: 'English' },
+    { code: 'ar', name: 'العربية' },
+    { code: 'fr', name: 'Français' },
+    { code: 'es', name: 'Español' }
+  ];
+  
+  constructor(private core: Renovation) {}
+  
+  async switchLanguage(langCode: string) {
+    // Load translations for new language
+    const response = await this.core.translate.loadTranslations({
+      lang: langCode
+    });
+    
+    if (response.success) {
+      // Set as current language
+      this.core.translate.setCurrentLanguage({ lang: langCode });
+      
+      // Update user preference in backend if logged in
+      const currentUser = this.core.auth.getCurrentUser();
+      if (currentUser && currentUser !== 'Guest') {
+        await this.core.auth.setUserLanguage(langCode);
+      }
+      
+      // Refresh UI
+      this.refreshUI();
+    }
+  }
+  
+  private refreshUI() {
+    // Emit event for UI components to update
+    window.dispatchEvent(new CustomEvent('languageChanged'));
+  }
+  
+  renderSwitcher(): HTMLSelectElement {
+    const select = document.createElement('select');
+    
+    this.languages.forEach(lang => {
+      const option = document.createElement('option');
+      option.value = lang.code;
+      option.textContent = lang.name;
+      select.appendChild(option);
+    });
+    
+    select.value = this.core.translate.getCurrentLanguage();
+    
+    select.addEventListener('change', (e) => {
+      const target = e.target as HTMLSelectElement;
+      this.switchLanguage(target.value);
+    });
+    
+    return select;
+  }
+}
+
+// Usage
+const switcher = new LanguageSwitcher(core);
+const selectElement = switcher.renderSwitcher();
+document.body.appendChild(selectElement);
+```
+
+### Form with Translations
+
+Build a form that updates with language changes:
+
+```typescript Translatable Form
+class TranslatableForm {
+  private formElement: HTMLFormElement;
+  
+  constructor(private core: Renovation) {
+    this.formElement = this.createForm();
+    this.setupLanguageChangeListener();
+  }
+  
+  private createForm(): HTMLFormElement {
+    const form = document.createElement('form');
+    
+    // Name field
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = this.core.translate.getMessage({ txt: 'Name' });
+    nameLabel.dataset.translateKey = 'Name';
+    
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = this.core.translate.getMessage({
+      txt: 'Enter your name'
+    });
+    nameInput.dataset.translateKey = 'Enter your name';
+    
+    // Email field
+    const emailLabel = document.createElement('label');
+    emailLabel.textContent = this.core.translate.getMessage({ txt: 'Email' });
+    emailLabel.dataset.translateKey = 'Email';
+    
+    const emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.placeholder = this.core.translate.getMessage({
+      txt: 'Enter your email'
+    });
+    emailInput.dataset.translateKey = 'Enter your email';
+    
+    // Submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.textContent = this.core.translate.getMessage({ txt: 'Submit' });
+    submitBtn.dataset.translateKey = 'Submit';
+    
+    form.appendChild(nameLabel);
+    form.appendChild(nameInput);
+    form.appendChild(emailLabel);
+    form.appendChild(emailInput);
+    form.appendChild(submitBtn);
+    
+    return form;
+  }
+  
+  private setupLanguageChangeListener() {
+    window.addEventListener('languageChanged', () => {
+      this.updateTranslations();
+    });
+  }
+  
+  private updateTranslations() {
+    // Update all elements with translate keys
+    const elements = this.formElement.querySelectorAll('[data-translate-key]');
+    
+    elements.forEach(element => {
+      const key = element.getAttribute('data-translate-key');
+      const translated = this.core.translate.getMessage({ txt: key });
+      
+      if (element.tagName === 'INPUT') {
+        (element as HTMLInputElement).placeholder = translated;
+      } else {
+        element.textContent = translated;
+      }
+    });
+  }
+  
+  render(): HTMLFormElement {
+    return this.formElement;
+  }
+}
+
+// Usage
+const form = new TranslatableForm(core);
+document.body.appendChild(form.render());
+```
+
+### Date and Number Formatting
+
+While the SDK handles text translations, combine with native APIs for formatting:
+
+```typescript Locale-Aware Formatting
+class LocaleFormatter {
+  constructor(private core: Renovation) {}
+  
+  formatDate(date: Date): string {
+    const locale = this.getLocaleCode();
+    return new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  }
+  
+  formatNumber(value: number): string {
+    const locale = this.getLocaleCode();
+    return new Intl.NumberFormat(locale).format(value);
+  }
+  
+  formatCurrency(amount: number, currency: string = 'USD'): string {
+    const locale = this.getLocaleCode();
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  }
+  
+  private getLocaleCode(): string {
+    const langCode = this.core.translate.getCurrentLanguage();
+    
+    // Map language codes to locale codes
+    const localeMap = {
+      'en': 'en-US',
+      'ar': 'ar-SA',
+      'fr': 'fr-FR',
+      'es': 'es-ES',
+      'de': 'de-DE'
+    };
+    
+    return localeMap[langCode] || 'en-US';
+  }
+}
+
+// Usage
+const formatter = new LocaleFormatter(core);
+
+core.translate.setCurrentLanguage({ lang: 'ar' });
+console.log(formatter.formatDate(new Date()));  // "١٥ نوفمبر ٢٠٢٤"
+console.log(formatter.formatNumber(1234567.89));  // "١٬٢٣٤٬٥٦٧٫٨٩"
+console.log(formatter.formatCurrency(99.99, 'SAR'));  // "٩٩٫٩٩ ر.س."
+```
+
+## Session Integration
+
+Translations automatically sync with user sessions:
+
+```typescript Session-Based Translations
+import { SessionStatus } from 'renovation-core';
+
+// Subscribe to session changes
+SessionStatus.subscribe(async (session) => {
+  if (session.loggedIn && session.lang) {
+    console.log('User language:', session.lang);
+    
+    // Translations are automatically loaded
+    // Just update your UI
+    updateUITranslations();
+  }
+});
+
+function updateUITranslations() {
+  // Update all translatable elements
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    const key = element.getAttribute('data-i18n');
+    element.textContent = core.translate.getMessage({ txt: key });
+  });
+}
+```
+
+## Best Practices
+
+1. **Load early**: Load translations immediately after authentication.
+
+2. **Fallback text**: Always provide fallback text (original English) for missing translations.
+
+3. **Key naming**: Use clear, descriptive keys that make sense in all languages.
+
+4. **Avoid hardcoding**: Never hardcode user-facing text; always use translation keys.
+
+5. **Test all languages**: Test your UI with different languages, especially RTL languages.
+
+6. **Cache translations**: The SDK caches translations automatically; don't reload unnecessarily.
+
+7. **Context matters**: Some words translate differently based on context; use descriptive keys.
+
+## RTL Language Support
+
+Support right-to-left languages like Arabic:
+
+```typescript RTL Support
+class RTLManager {
+  private rtlLanguages = ['ar', 'he', 'fa', 'ur'];
+  
+  constructor(private core: Renovation) {
+    this.setupLanguageChangeListener();
+  }
+  
+  private setupLanguageChangeListener() {
+    window.addEventListener('languageChanged', () => {
+      this.updateDirection();
+    });
+  }
+  
+  private updateDirection() {
+    const currentLang = this.core.translate.getCurrentLanguage();
+    const isRTL = this.rtlLanguages.includes(currentLang);
+    
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.lang = currentLang;
+  }
+  
+  isRTL(): boolean {
+    const currentLang = this.core.translate.getCurrentLanguage();
+    return this.rtlLanguages.includes(currentLang);
+  }
+}
+
+// Usage
+const rtlManager = new RTLManager(core);
+
+core.translate.setCurrentLanguage({ lang: 'ar' });
+console.log('Is RTL:', rtlManager.isRTL());  // true
+```
+
+## Pluralization
+
+Handle plural forms (requires custom implementation):
+
+```typescript Pluralization Helper
+class PluralHelper {
+  constructor(private core: Renovation) {}
+  
+  pluralize(key: string, count: number): string {
+    const singularKey = key;
+    const pluralKey = key + '_plural';
+    
+    if (count === 1) {
+      return this.core.translate.getMessage({ txt: singularKey });
+    } else {
+      const plural = this.core.translate.getMessage({ txt: pluralKey });
+      // If plural form doesn't exist, add 's' to singular (English)
+      return plural === pluralKey 
+        ? this.core.translate.getMessage({ txt: singularKey }) + 's'
+        : plural;
+    }
+  }
+}
+
+// Usage
+const pluralHelper = new PluralHelper(core);
+
+// Extend dictionary with plural forms
+core.translate.extendDictionary({
+  dict: {
+    'item': 'item',
+    'item_plural': 'items',
+    'customer': 'customer',
+    'customer_plural': 'customers'
+  },
+  lang: 'en'
+});
+
+console.log(pluralHelper.pluralize('item', 1));  // 'item'
+console.log(pluralHelper.pluralize('item', 5));  // 'items'
+```
+
+## Related Resources
+
+- [Translation Controller API](/api/translation-controller)
+- [Authentication Guide](/guides/authentication)
+- [Auth Controller API](/api/auth-controller)

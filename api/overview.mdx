@@ -1,0 +1,257 @@
+---
+title: API Reference Overview
+description: Complete API reference for the Renovation Core SDK
+---
+
+## Introduction
+
+The Renovation Core SDK provides a comprehensive set of APIs for interacting with Frappe-based backends. The SDK is organized using a **controller pattern**, where different aspects of functionality are grouped into specialized controllers that handle specific domains like authentication, data models, permissions, and more.
+
+## Architecture
+
+### The Renovation Class
+
+The `Renovation` class is the main entry point to the SDK. It initializes and provides access to all controllers and utilities.
+
+```typescript
+import { Renovation } from 'renovation-core';
+
+const renovation = new Renovation();
+
+// Initialize with backend configuration
+await renovation.init({
+  backend: 'frappe',
+  hostURL: 'https://your-site.com',
+  clientId: 'your-client-id', // optional
+  useJWT: false, // optional
+  disableLog: false // optional
+});
+```
+
+### Controller Pattern
+
+All controllers in Renovation Core extend the base `RenovationController` class, which provides:
+
+- **`getCore()`** - Returns the main Renovation instance
+- **`getHostUrl()`** - Returns the configured backend URL
+- **`handleError()`** - Standardized error handling
+- **`clearCache()`** - Cache management
+
+Each controller is accessible as a property on the main `Renovation` instance and provides domain-specific methods for interacting with the backend.
+
+## Main Controllers
+
+<CardGroup cols={2}>
+  <Card title="Auth Controller" icon="lock" href="/api/auth-controller">
+    Authentication and session management including login, logout, OTP, and JWT support
+  </Card>
+  
+  <Card title="Model Controller" icon="database" href="/api/model-controller">
+    CRUD operations for documents, assignments, tags, reports, and data retrieval
+  </Card>
+  
+  <Card title="Meta Controller" icon="diagram-project" href="/api/meta-controller">
+    Access DocType metadata, field definitions, and schema information
+  </Card>
+  
+  <Card title="Permission Controller" icon="shield" href="/api/permission-controller">
+    Check and manage document-level and field-level permissions
+  </Card>
+  
+  <Card title="Storage Controller" icon="folder" href="/api/storage-controller">
+    Upload, download, and manage files and attachments
+  </Card>
+  
+  <Card title="Translation Controller" icon="language" href="/api/translation-controller">
+    Multi-language support and translation management
+  </Card>
+  
+  <Card title="UI Controller" icon="window" href="/api/ui-controller">
+    UI-related functionality and client-side utilities
+  </Card>
+  
+  <Card title="Dashboard Controller" icon="chart-line" href="/api/dashboard-controller">
+    Dashboard data and analytics retrieval
+  </Card>
+  
+  <Card title="Defaults Controller" icon="sliders" href="/api/defaults-controller">
+    Manage user and system default values
+  </Card>
+</CardGroup>
+
+## Accessing Controllers
+
+Once the Renovation instance is initialized, all controllers are accessible as properties:
+
+```typescript
+// Authentication
+await renovation.auth.login({
+  email: 'user@example.com',
+  password: 'password'
+});
+
+// Check session status
+const sessionStatus = await renovation.auth.checkLogin();
+
+// Model operations
+const doc = await renovation.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-001'
+});
+
+// Save a document
+const savedDoc = await renovation.model.saveDoc({
+  doc: {
+    doctype: 'Customer',
+    customer_name: 'New Customer'
+  }
+});
+
+// Get metadata
+const meta = await renovation.meta.getDocMeta({
+  doctype: 'Customer'
+});
+
+// Check permissions
+const hasPerm = await renovation.perm.hasPerm({
+  doctype: 'Customer',
+  perm: 'read'
+});
+
+// Upload files
+const uploadResult = await renovation.storage.uploadFile({
+  file: fileObject,
+  isPrivate: false
+});
+
+// Translate text
+const translated = await renovation.translate.getTranslation({
+  txt: 'Hello',
+  language: 'es'
+});
+```
+
+## Additional Components
+
+### Frappe Utilities
+
+When using the Frappe backend, additional utilities are available through `renovation.frappe`:
+
+```typescript
+// Access Frappe-specific methods
+const appVersions = await renovation.frappe.getAppVersions();
+
+// Check if an app is installed
+const isInstalled = renovation.frappe.checkAppInstalled(['app_name']);
+```
+
+### Script Manager
+
+Load and execute scripts dynamically:
+
+```typescript
+// Load external scripts
+await renovation.scriptManager.loadScripts([
+  'https://example.com/script.js'
+]);
+```
+
+### Log Manager
+
+Manage logging and debugging:
+
+```typescript
+// Access logs
+renovation.log.getLogLevel();
+```
+
+### SocketIO Client
+
+Real-time communication support:
+
+```typescript
+// Connect to SocketIO
+renovation.socketio.connect();
+```
+
+### Message Bus
+
+Event-driven communication within the application:
+
+```typescript
+// Subscribe to events
+renovation.bus.on('custom-event', (data) => {
+  console.log('Event received:', data);
+});
+
+// Emit events
+renovation.bus.emit('custom-event', { message: 'Hello' });
+```
+
+### Direct API Calls
+
+For custom backend methods not covered by controllers:
+
+```typescript
+// Call custom commands
+const response = await renovation.call({
+  cmd: 'your_app.api.custom_method',
+  param1: 'value1',
+  param2: 'value2'
+});
+```
+
+## Utilities
+
+The SDK includes various utility functions accessible through `renovation.utils`:
+
+```typescript
+// Parse JSON safely
+const data = renovation.utils.getJSON(jsonString);
+
+// Date utilities are also available
+// See the utils documentation for complete details
+```
+
+## Cache Management
+
+Clear cached data across all controllers:
+
+```typescript
+// Clears cache for model, meta, auth, perm, scriptManager, and ui controllers
+renovation.clearCache();
+```
+
+This is useful when you need to force fresh data retrieval or after significant data changes.
+
+## Request Configuration
+
+The Renovation instance provides direct access to the request function for custom HTTP operations:
+
+```typescript
+import { httpMethod, contentType } from 'renovation-core';
+
+const response = await renovation.request(
+  'https://api.example.com/endpoint',
+  httpMethod.POST,
+  { 'Authorization': 'Bearer token' },
+  {
+    contentType: contentType['application/json'],
+    data: { key: 'value' }
+  }
+);
+```
+
+## Next Steps
+
+Explore the detailed documentation for each controller to learn about specific methods, parameters, and return types:
+
+- [Authentication](/api/auth-controller) - User login and session management
+- [Model Operations](/api/model-controller) - Document CRUD and data operations
+- [Metadata](/api/meta-controller) - DocType and field information
+- [Permissions](/api/permission-controller) - Access control and authorization
+- [Storage](/api/storage-controller) - File and attachment handling
+- [Translation](/api/translation-controller) - Internationalization support
+- [UI](/api/ui-controller) - User interface utilities
+- [Dashboard](/api/dashboard-controller) - Analytics and reporting
+- [Defaults](/api/defaults-controller) - Default value management

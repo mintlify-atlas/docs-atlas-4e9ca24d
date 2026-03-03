@@ -1,0 +1,399 @@
+---
+title: "Configuration"
+description: "Configure Renovation Core SDK settings and behavior"
+---
+
+## Overview
+
+The `RenovationConfig` class manages the SDK configuration, including the backend type, host URL, and various settings. It's automatically created during initialization and accessible via `renovation.config`.
+
+## RenovationConfig Class
+
+The configuration instance is created when you initialize the SDK:
+
+```typescript
+import { Renovation } from "renovation-core";
+
+const renovation = new Renovation();
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe"
+});
+
+// Access configuration
+const config = renovation.config;
+console.log(config.hostUrl);  // "https://your-site.frappe.cloud"
+console.log(config.backend);  // "frappe"
+```
+
+## Configuration Properties
+
+### coreInstance
+
+**Type:** `Renovation`
+
+Reference to the parent Renovation instance that owns this configuration.
+
+```typescript
+const config = renovation.config;
+const coreInstance = config.coreInstance;
+
+// Access any controller through the core instance
+const user = await coreInstance.auth.getCurrentUser();
+```
+
+### backend
+
+**Type:** `RenovationBackend` (`"frappe"` | `"firebase"`)
+
+The backend type configured for the SDK.
+
+```typescript
+const config = renovation.config;
+console.log(config.backend);  // "frappe"
+
+// Use for conditional logic
+if (config.backend === "frappe") {
+  // Frappe-specific operations
+  await renovation.frappe?.loadAppVersions();
+}
+```
+
+### hostUrl
+
+**Type:** `string | undefined`
+
+The host URL of the backend server.
+
+```typescript
+const config = renovation.config;
+console.log(config.hostUrl);  // "https://your-site.frappe.cloud"
+
+// Use in custom API calls
+const endpoint = `${config.hostUrl}/api/method/custom.method`;
+```
+
+<Note>
+The `hostUrl` may be `undefined` if not provided during initialization, though this is uncommon in typical usage.
+</Note>
+
+### disableSubmission
+
+**Type:** `boolean`
+
+**Default:** `false`
+
+A setting property to disable submission functionality used in the defaults controller.
+
+```typescript
+const config = renovation.config;
+
+// Enable/disable submissions globally
+config.disableSubmission = true;
+
+// This affects default value operations
+await renovation.defaults.getSomeDefaults();
+```
+
+## Backend Selection
+
+### Frappe Backend
+
+The Frappe backend is the primary and most fully-featured backend:
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud",
+  backend: "frappe"  // or omit, as it's the default
+});
+
+// All Frappe-specific controllers are available
+const doc = await renovation.model.getDoc("User", "administrator");
+const meta = await renovation.meta.getMeta("User");
+const hasPermission = await renovation.perm.hasPermission("User", "read");
+```
+
+**Frappe Backend Features:**
+- Full document CRUD operations
+- DocType metadata access
+- Permission checking
+- File storage and management
+- Multi-language translations
+- Dashboard data
+- Default values
+- Session and JWT authentication
+- WebSocket support
+
+### Firebase Backend
+
+<Warning>
+Firebase backend support is experimental and not recommended for production use. Frappe backend is the primary supported backend.
+</Warning>
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-firebase-project.firebaseapp.com",
+  backend: "firebase"
+});
+
+// Limited functionality available
+// Check documentation for Firebase-specific operations
+```
+
+## Host URL Setup
+
+The host URL is the base URL for all API requests:
+
+### Frappe Cloud
+
+```typescript
+await renovation.init({
+  hostURL: "https://your-site.frappe.cloud"
+});
+```
+
+### Self-Hosted Frappe
+
+```typescript
+await renovation.init({
+  hostURL: "https://erp.yourcompany.com"
+});
+```
+
+### Local Development
+
+```typescript
+await renovation.init({
+  hostURL: "http://localhost:8000"
+});
+```
+
+<Note>
+Include the protocol (`http://` or `https://`) in the host URL. Do not include trailing slashes.
+</Note>
+
+## Static Instance
+
+The `RenovationConfig` class maintains a static instance for use in utility functions and exported functions:
+
+```typescript
+import { RenovationConfig } from "renovation-core";
+
+// Access the global configuration instance
+const config = RenovationConfig.instance;
+
+if (config) {
+  console.log(`Connected to: ${config.hostUrl}`);
+  console.log(`Backend: ${config.backend}`);
+}
+```
+
+<Warning>
+The static instance is only available after calling `renovation.init()`. Accessing it before initialization will return `undefined`.
+</Warning>
+
+## Configuration Use Cases
+
+### Dynamic Backend Selection
+
+Choose backend based on environment:
+
+```typescript
+const backend = process.env.BACKEND === "firebase" ? "firebase" : "frappe";
+const hostURL = process.env.API_URL || "http://localhost:8000";
+
+await renovation.init({
+  backend,
+  hostURL
+});
+```
+
+### Environment-Based Configuration
+
+```typescript
+const isDevelopment = process.env.NODE_ENV === "development";
+
+await renovation.init({
+  hostURL: isDevelopment 
+    ? "http://localhost:8000" 
+    : "https://production.frappe.cloud",
+  backend: "frappe",
+  disableLog: !isDevelopment
+});
+```
+
+### Accessing Configuration in Controllers
+
+All controllers receive the configuration instance:
+
+```typescript
+// Inside a custom controller or utility
+import { RenovationConfig } from "renovation-core";
+
+function customOperation() {
+  const config = RenovationConfig.instance;
+  
+  if (!config) {
+    throw new Error("Renovation not initialized");
+  }
+  
+  // Use configuration
+  const apiUrl = `${config.hostUrl}/api/method/my.custom.method`;
+  
+  return config.coreInstance.request(
+    apiUrl,
+    "POST",
+    { /* headers */ },
+    { /* data */ }
+  );
+}
+```
+
+## Configuration Best Practices
+
+### 1. Initialize Once
+
+Initialize the SDK once at application startup:
+
+```typescript
+// app.ts or index.ts
+import { Renovation } from "renovation-core";
+
+export const renovation = new Renovation();
+
+export async function initializeApp() {
+  await renovation.init({
+    hostURL: process.env.FRAPPE_URL,
+    backend: "frappe",
+    useJWT: true
+  });
+}
+
+// main.ts
+import { initializeApp } from "./app";
+
+await initializeApp();
+```
+
+### 2. Environment Variables
+
+Store configuration in environment variables:
+
+```typescript
+// .env
+FRAPPE_URL=https://your-site.frappe.cloud
+CLIENT_ID=my-app
+ENABLE_LOGGING=true
+```
+
+```typescript
+// config.ts
+import { Renovation } from "renovation-core";
+
+export async function setupRenovation() {
+  const renovation = new Renovation();
+  
+  await renovation.init({
+    hostURL: process.env.FRAPPE_URL!,
+    backend: "frappe",
+    clientId: process.env.CLIENT_ID,
+    disableLog: process.env.ENABLE_LOGGING !== "true"
+  });
+  
+  return renovation;
+}
+```
+
+### 3. Type Safety
+
+Use TypeScript for type-safe configuration:
+
+```typescript
+import { Renovation, RenovationBackend, InitParams } from "renovation-core";
+
+interface AppConfig {
+  apiUrl: string;
+  backend: RenovationBackend;
+  clientId?: string;
+  enableLogging: boolean;
+}
+
+function createInitParams(appConfig: AppConfig): InitParams {
+  return {
+    hostURL: appConfig.apiUrl,
+    backend: appConfig.backend,
+    clientId: appConfig.clientId,
+    disableLog: !appConfig.enableLogging
+  };
+}
+
+const renovation = new Renovation();
+await renovation.init(createInitParams({
+  apiUrl: "https://your-site.frappe.cloud",
+  backend: "frappe",
+  enableLogging: true
+}));
+```
+
+### 4. Configuration Validation
+
+Validate configuration before initialization:
+
+```typescript
+function validateConfig(hostURL: string) {
+  if (!hostURL) {
+    throw new Error("Host URL is required");
+  }
+  
+  if (!hostURL.startsWith("http://") && !hostURL.startsWith("https://")) {
+    throw new Error("Host URL must include protocol (http:// or https://)");
+  }
+  
+  if (hostURL.endsWith("/")) {
+    throw new Error("Host URL should not have trailing slash");
+  }
+}
+
+const hostURL = process.env.FRAPPE_URL!;
+validateConfig(hostURL);
+
+await renovation.init({ hostURL, backend: "frappe" });
+```
+
+## Logging Configuration
+
+Control logging behavior through initialization:
+
+```typescript
+// Development: Enable detailed logging
+await renovation.init({
+  hostURL: "http://localhost:8000",
+  backend: "frappe",
+  disableLog: false  // Enable logging
+});
+
+// Production: Disable logging for performance
+await renovation.init({
+  hostURL: "https://production.frappe.cloud",
+  backend: "frappe",
+  disableLog: true  // Disable logging
+});
+```
+
+When logging is enabled, the SDK uses the debug namespace `renovation-core-*`. You can enable/disable logging programmatically:
+
+```typescript
+import { logger } from "renovation-core/utils";
+
+// Enable logging
+logger.enable("renovation-core-*");
+
+// Disable logging
+logger.disable();
+```
+
+## Next Steps
+
+- Learn about [error handling](/core/error-handling) in the SDK
+- Explore controller-specific configuration options
+- Set up authentication with the Auth Controller

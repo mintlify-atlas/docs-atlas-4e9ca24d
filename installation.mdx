@@ -1,0 +1,148 @@
+---
+title: Installation
+description: Get started with Renovation Core by installing the SDK and setting up your backend
+---
+
+# Installation
+
+Get Renovation Core up and running in your project with just a few commands.
+
+## Prerequisites
+
+Before installing Renovation Core, ensure you have:
+
+- **Node.js** 12.x or higher
+- **npm**, **yarn**, or **pnpm** package manager
+- A **Frappe backend** instance (v12 or higher recommended)
+- Basic knowledge of TypeScript/JavaScript and async/await
+
+## Install the SDK
+
+Install Renovation Core using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install @leam-tech/renovation-core
+```
+
+```bash yarn
+yarn add @leam-tech/renovation-core
+```
+
+```bash pnpm
+pnpm add @leam-tech/renovation-core
+```
+
+</CodeGroup>
+
+## Backend Setup
+
+While Renovation Core works with any standard Frappe backend, installing the companion `renovation_core` app unlocks additional features and optimizations.
+
+### Installing renovation_core App
+
+The `renovation_core` Frappe app provides enhanced capabilities such as:
+- JWT authentication support
+- Optimized API endpoints
+- Advanced authentication methods (OTP, social login)
+- Enhanced real-time features
+
+To install the app on your Frappe site:
+
+<Steps>
+  <Step title="Get the app">
+    Navigate to your Frappe bench directory and run:
+    
+    ```bash
+    bench get-app renovation_core https://github.com/leam-tech/renovation_core.git
+    ```
+  </Step>
+  
+  <Step title="Install on your site">
+    Install the app on your site:
+    
+    ```bash
+    bench --site your-site-name install-app renovation_core
+    ```
+  </Step>
+  
+  <Step title="Restart services">
+    Restart your Frappe services to apply changes:
+    
+    ```bash
+    bench restart
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The `renovation_core` backend app is **optional**. Renovation Core will work with any standard Frappe backend, but some advanced features require the backend app.
+</Note>
+
+## Verify Installation
+
+Create a simple test file to verify your installation:
+
+```typescript test.ts
+import { Renovation } from '@leam-tech/renovation-core';
+
+const renovation = new Renovation();
+
+await renovation.init({
+  hostURL: 'https://your-frappe-site.com',
+  backend: 'frappe'
+});
+
+console.log('Renovation Core initialized successfully!');
+```
+
+Run the file:
+
+```bash
+ts-node test.ts
+```
+
+If you see the success message, you're ready to go!
+
+## TypeScript Configuration
+
+For TypeScript projects, ensure your `tsconfig.json` includes:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "commonjs",
+    "lib": ["ES2017", "DOM"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node"
+  }
+}
+```
+
+## CORS Configuration
+
+If you're developing a web application, you'll need to configure CORS on your Frappe backend to allow requests from your development server.
+
+Add to your Frappe `site_config.json`:
+
+```json site_config.json
+{
+  "allow_cors": "*",
+  "cors_allowed_origins": ["http://localhost:3000", "http://localhost:8080"]
+}
+```
+
+<Tip>
+  In production, replace `"*"` with your specific domain for security.
+</Tip>
+
+## Next Steps
+
+Now that you have Renovation Core installed, let's initialize it and perform your first operations:
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Learn how to initialize Renovation Core and perform basic operations
+</Card>

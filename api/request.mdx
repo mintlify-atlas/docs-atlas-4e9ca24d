@@ -1,0 +1,630 @@
+---
+title: Request API
+description: HTTP request utilities and response handling for Renovation Core SDK
+---
+
+## Overview
+
+The request module provides low-level HTTP utilities for making API calls, handling responses, managing errors, and tracking session status. It wraps axios and provides a consistent interface for all network operations.
+
+## Request Function
+
+Core HTTP request function that wraps axios with Renovation-specific handling.
+
+```typescript
+function Request(
+  url: string,
+  method: httpMethod,
+  headers: { [key: string]: any },
+  data?: { contentType: contentType; data: any },
+  responseType?: AxiosResponseType
+): Promise<RequestResponse<any>>
+```
+
+<ParamField path="url" type="string" required>
+  The URL of the endpoint to call
+</ParamField>
+
+<ParamField path="method" type="httpMethod" required>
+  The HTTP method to use (GET, POST, PUT, DELETE)
+</ParamField>
+
+<ParamField path="headers" type="object" required>
+  Headers to include in the request
+</ParamField>
+
+<ParamField path="data" type="object">
+  Request body data with content type specification
+  
+  <Expandable title="data properties">
+    <ResponseField name="contentType" type="contentType" required>
+      The content type of the request body
+    </ResponseField>
+    
+    <ResponseField name="data" type="any" required>
+      The actual data to send
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="responseType" type="AxiosResponseType" default="json">
+  Expected response type: `"json"` | `"blob"` | `"arraybuffer"` | `"document"` | `"text"` | `"stream"`
+</ParamField>
+
+<ResponseField name="return" type="Promise<RequestResponse<any>>">
+  Promise resolving to RequestResponse object with parsed response data
+</ResponseField>
+
+```typescript
+import { 
+  Request, 
+  httpMethod, 
+  contentType,
+  FrappeRequestOptions 
+} from "@renovation/core";
+
+// GET request
+const response = await Request(
+  "https://example.com/api/method/get_data",
+  httpMethod.GET,
+  FrappeRequestOptions.headers
+);
+
+if (response.success) {
+  console.log("Data:", response.data);
+} else {
+  console.error("Error:", response.error);
+}
+
+// POST request with JSON
+const postResponse = await Request(
+  "https://example.com/api/method/create_doc",
+  httpMethod.POST,
+  FrappeRequestOptions.headers,
+  {
+    contentType: contentType["application/json"],
+    data: { doctype: "Customer", name: "John Doe" }
+  }
+);
+
+// Download file as blob
+const fileResponse = await Request(
+  "https://example.com/api/method/download_file",
+  httpMethod.GET,
+  FrappeRequestOptions.headers,
+  undefined,
+  "blob"
+);
+```
+
+## RequestResponse Class
+
+Wrapper class for handling and representing responses from the backend.
+
+### Properties
+
+<ResponseField name="httpCode" type="number">
+  HTTP status code of the response
+</ResponseField>
+
+<ResponseField name="success" type="boolean">
+  Whether the request was successful (2xx status code)
+</ResponseField>
+
+<ResponseField name="data" type="T">
+  The response data (typed)
+</ResponseField>
+
+<ResponseField name="exc" type="RenovationError">
+  Error type if request failed
+</ResponseField>
+
+<ResponseField name="error" type="ErrorDetail">
+  Detailed error information if request failed
+</ResponseField>
+
+<ResponseField name="_" type="AxiosResponse">
+  Raw axios response (for debugging)
+</ResponseField>
+
+### Static Methods
+
+#### success
+
+Creates a successful RequestResponse.
+
+```typescript
+static success<F>(
+  data: F,
+  httpCode?: number,
+  rawResponse?: AxiosResponse
+): RequestResponse<F>
+```
+
+<ParamField path="data" type="F" required>
+  The response data
+</ParamField>
+
+<ParamField path="httpCode" type="number" default="200">
+  HTTP status code
+</ParamField>
+
+<ParamField path="rawResponse" type="AxiosResponse">
+  Raw axios response
+</ParamField>
+
+```typescript
+import { RequestResponse } from "@renovation/core";
+
+const response = RequestResponse.success(
+  { name: "John", age: 30 },
+  200
+);
+
+console.log(response.success); // true
+console.log(response.data); // { name: "John", age: 30 }
+```
+
+#### fail
+
+Creates a failed RequestResponse with error details.
+
+```typescript
+static fail(errorDetail: ErrorDetail): RequestResponse<any>
+```
+
+<ParamField path="errorDetail" type="ErrorDetail" required>
+  Error detail object containing error information
+</ParamField>
+
+```typescript
+import { RequestResponse, RenovationError } from "@renovation/core";
+
+const response = RequestResponse.fail({
+  title: "Authentication Failed",
+  description: "Invalid credentials provided",
+  type: RenovationError.AuthenticationError,
+  info: {
+    httpCode: 401,
+    cause: "Invalid username or password",
+    suggestion: "Please check your credentials and try again"
+  }
+});
+
+console.log(response.success); // false
+console.log(response.error.title); // "Authentication Failed"
+```
+
+## RenovationError Enum
+
+Standardized error types for API operations.
+
+<ResponseField name="AuthenticationError" type="0">
+  Authentication failed (invalid credentials, session expired)
+</ResponseField>
+
+<ResponseField name="PermissionError" type="1">
+  User lacks permission for the operation
+</ResponseField>
+
+<ResponseField name="NotFoundError" type="2">
+  Requested resource not found
+</ResponseField>
+
+<ResponseField name="NetworkError" type="3">
+  Network connectivity issue
+</ResponseField>
+
+<ResponseField name="GenericError" type="4">
+  Generic or unknown error
+</ResponseField>
+
+<ResponseField name="DataFormatError" type="5">
+  Data format validation error
+</ResponseField>
+
+<ResponseField name="DuplicateEntryError" type="6">
+  Duplicate entry constraint violation
+</ResponseField>
+
+```typescript
+import { RenovationError } from "@renovation/core";
+
+// Check error type
+if (!response.success) {
+  switch (response.error.type) {
+    case RenovationError.AuthenticationError:
+      // Redirect to login
+      window.location.href = "/login";
+      break;
+    
+    case RenovationError.PermissionError:
+      showNotification("You don't have permission for this action");
+      break;
+    
+    case RenovationError.NotFoundError:
+      showNotification("Resource not found");
+      break;
+    
+    default:
+      showNotification("An error occurred");
+  }
+}
+```
+
+## ErrorDetail Interface
+
+Detailed error information structure.
+
+<ResponseField name="title" type="string">
+  Error title for UI display
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Short error description for UI display
+</ResponseField>
+
+<ResponseField name="type" type="RenovationError">
+  Categorized error type
+</ResponseField>
+
+<ResponseField name="info" type="object" required>
+  Additional error details
+  
+  <Expandable title="info properties">
+    <ResponseField name="server_messages" type="string[]">
+      Messages from the server
+    </ResponseField>
+    
+    <ResponseField name="httpCode" type="number">
+      HTTP status code
+    </ResponseField>
+    
+    <ResponseField name="cause" type="string">
+      Root cause of the error
+    </ResponseField>
+    
+    <ResponseField name="suggestion" type="string">
+      Suggested resolution
+    </ResponseField>
+    
+    <ResponseField name="data" type="any">
+      Additional debugging data
+    </ResponseField>
+    
+    <ResponseField name="rawResponse" type="AxiosResponse">
+      Raw axios response
+    </ResponseField>
+    
+    <ResponseField name="rawError" type="AxiosError">
+      Raw axios error
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## HTTP Method Enum
+
+<ResponseField name="httpMethod.GET" type="string">
+  HTTP GET method
+</ResponseField>
+
+<ResponseField name="httpMethod.POST" type="string">
+  HTTP POST method
+</ResponseField>
+
+<ResponseField name="httpMethod.PUT" type="string">
+  HTTP PUT method
+</ResponseField>
+
+<ResponseField name="httpMethod.DELETE" type="string">
+  HTTP DELETE method
+</ResponseField>
+
+## Content Type Enum
+
+<ResponseField name="contentType['query-string']" type="string">
+  Send data as URL query parameters
+</ResponseField>
+
+<ResponseField name="contentType['application/json']" type="string">
+  Send data as JSON in request body
+</ResponseField>
+
+<ResponseField name="contentType['application/x-www-form-urlencoded']" type="string">
+  Send data as form-encoded in request body
+</ResponseField>
+
+<ResponseField name="contentType['multipart/form-data']" type="string">
+  Send data as multipart form data (for file uploads)
+</ResponseField>
+
+```typescript
+import { Request, httpMethod, contentType } from "@renovation/core";
+
+// Query string parameters
+const getResponse = await Request(
+  "https://example.com/api/method/search",
+  httpMethod.GET,
+  {},
+  {
+    contentType: contentType["query-string"],
+    data: { query: "customer", limit: 10 }
+  }
+);
+// URL: /search?query=customer&limit=10
+
+// JSON body
+const jsonResponse = await Request(
+  "https://example.com/api/method/save",
+  httpMethod.POST,
+  {},
+  {
+    contentType: contentType["application/json"],
+    data: { name: "John", email: "john@example.com" }
+  }
+);
+
+// Form encoded
+const formResponse = await Request(
+  "https://example.com/api/method/login",
+  httpMethod.POST,
+  {},
+  {
+    contentType: contentType["application/x-www-form-urlencoded"],
+    data: { username: "john", password: "secret" }
+  }
+);
+
+// File upload
+const formData = new FormData();
+formData.append("file", fileBlob);
+formData.append("doctype", "File");
+
+const uploadResponse = await Request(
+  "https://example.com/api/method/upload",
+  httpMethod.POST,
+  {},
+  {
+    contentType: contentType["multipart/form-data"],
+    data: formData
+  }
+);
+```
+
+## SessionStatus Observable
+
+RxJS BehaviorSubject tracking the current session state.
+
+### SessionStatusInfo Interface
+
+<ResponseField name="loggedIn" type="boolean" required>
+  Whether user is currently logged in
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Unix timestamp of status update
+</ResponseField>
+
+<ResponseField name="currentUser" type="string">
+  Username of logged in user
+</ResponseField>
+
+<ResponseField name="session_expired" type="boolean">
+  Set to `true` when session expires
+</ResponseField>
+
+```typescript
+import { SessionStatus } from "@renovation/core";
+
+// Subscribe to session changes
+SessionStatus.subscribe(status => {
+  console.log("Logged in:", status.loggedIn);
+  console.log("User:", status.currentUser);
+  
+  if (status.session_expired) {
+    // Redirect to login
+    window.location.href = "/login";
+  }
+});
+
+// Get current status
+const current = SessionStatus.value;
+if (!current.loggedIn) {
+  console.log("Not logged in");
+}
+
+// Update session status (usually done internally)
+SessionStatus.next({
+  loggedIn: true,
+  timestamp: Date.now() / 1000,
+  currentUser: "john@example.com"
+});
+```
+
+<Info>
+  SessionStatus is automatically updated by the SDK when authentication state changes. You typically subscribe to it rather than updating it manually.
+</Info>
+
+## Client ID Management
+
+Functions for managing client identification across requests.
+
+### setClientId
+
+Sets the client ID for multi-tenancy support.
+
+<ParamField path="id" type="string" required>
+  The client/site ID to set
+</ParamField>
+
+```typescript
+import { setClientId } from "@renovation/core";
+
+setClientId("site1.example.com");
+// All subsequent requests will include X-Client-Site header
+```
+
+### getClientId
+
+Retrieves the currently set client ID.
+
+<ResponseField name="return" type="string | null">
+  The current client ID or null if not set
+</ResponseField>
+
+```typescript
+import { getClientId } from "@renovation/core";
+
+const clientId = getClientId();
+if (clientId) {
+  console.log("Client ID:", clientId);
+}
+```
+
+### resetClientId
+
+Resets the client ID and removes the header.
+
+```typescript
+import { resetClientId } from "@renovation/core";
+
+resetClientId();
+// X-Client-Site header will no longer be included
+```
+
+## FrappeRequestOptions
+
+Default request options for Frappe backend compatibility.
+
+<ResponseField name="headers" type="object">
+  Default headers for Frappe API requests
+  
+  <Expandable title="headers">
+    <ResponseField name="Accept" type="string[]">
+      `["application/json"]`
+    </ResponseField>
+    
+    <ResponseField name="X-Requested-With" type="string[]">
+      `["XMLHttpRequest"]`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="jar" type="boolean">
+  Enable cookie jar (true)
+</ResponseField>
+
+<ResponseField name="withCredentials" type="boolean">
+  Include credentials in CORS requests (true)
+</ResponseField>
+
+```typescript
+import { FrappeRequestOptions } from "@renovation/core";
+
+// Use default Frappe headers
+const headers = { ...FrappeRequestOptions.headers };
+headers["Custom-Header"] = ["value"];
+```
+
+## Environment Detection
+
+### isBrowser
+
+Checks if running in browser environment.
+
+<ResponseField name="return" type="boolean">
+  `true` if in browser, `false` if in Node.js
+</ResponseField>
+
+### isNodeJS
+
+Checks if running in Node.js environment.
+
+<ResponseField name="return" type="boolean">
+  `true` if in Node.js, `false` if in browser
+</ResponseField>
+
+```typescript
+import { isBrowser, isNodeJS } from "@renovation/core";
+
+if (isBrowser()) {
+  // Browser-specific code
+  console.log("Running in browser");
+} else if (isNodeJS()) {
+  // Node.js-specific code
+  console.log("Running in Node.js");
+}
+```
+
+<Note>
+  The SDK automatically handles cookie storage differently in browser vs Node.js environments.
+</Note>
+
+## Complete Usage Example
+
+```typescript
+import { 
+  Renovation,
+  Request,
+  httpMethod,
+  contentType,
+  RenovationError,
+  SessionStatus,
+  setClientId,
+  FrappeRequestOptions
+} from "@renovation/core";
+
+const renovation = new Renovation();
+
+// Set up multi-tenancy
+setClientId("site1.example.com");
+
+// Monitor session status
+SessionStatus.subscribe(status => {
+  if (!status.loggedIn) {
+    console.log("User logged out");
+  }
+});
+
+// Initialize
+await renovation.init("https://example.com");
+
+// Make authenticated request
+const response = await Request(
+  "https://example.com/api/method/frappe.client.get_list",
+  httpMethod.GET,
+  FrappeRequestOptions.headers,
+  {
+    contentType: contentType["query-string"],
+    data: {
+      doctype: "Customer",
+      fields: JSON.stringify(["name", "email"]),
+      limit_page_length: 20
+    }
+  }
+);
+
+if (response.success) {
+  console.log("Customers:", response.data);
+} else {
+  // Handle errors
+  const error = response.error;
+  
+  switch (error.type) {
+    case RenovationError.AuthenticationError:
+      console.error("Please log in again");
+      break;
+    
+    case RenovationError.PermissionError:
+      console.error("Access denied:", error.description);
+      break;
+    
+    case RenovationError.NetworkError:
+      console.error("Network error:", error.info.cause);
+      break;
+    
+    default:
+      console.error("Error:", error.description);
+  }
+}
+```

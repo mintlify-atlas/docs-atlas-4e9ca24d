@@ -1,0 +1,585 @@
+---
+title: Storage Guide
+description: Complete guide to file uploads, progress tracking, and storage management in Renovation Core SDK
+---
+
+The Renovation Core SDK provides a robust file storage system with support for file uploads, progress tracking, and folder management.
+
+## File Upload
+
+### Basic Upload
+
+Upload files from browser or Node.js:
+
+<Tabs>
+  <Tab title="Browser Upload">
+    ```typescript Browser File Upload
+    import { Renovation } from 'renovation-core';
+    
+    const core = new Renovation();
+    core.init({ hostUrl: 'https://your-frappe-site.com' });
+    
+    // From file input
+    const fileInput = document.querySelector('input[type="file"]');
+    const file = fileInput.files[0];
+    
+    const uploadStatus = core.storage.uploadFile({
+      file: file,
+      isPrivate: false,
+      folder: 'Home/Documents'
+    });
+    
+    uploadStatus.subscribe(status => {
+      if (status.status === 'uploading') {
+        console.log('Uploading:', status.progress + '%');
+      } else if (status.status === 'completed') {
+        console.log('Upload completed!');
+        console.log('File URL:', status.requestResponse.data.file_url);
+      } else if (status.status === 'error') {
+        console.error('Upload failed:', status.requestResponse.error);
+      }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Node.js Upload">
+    ```typescript Node.js File Upload
+    import fs from 'fs';
+    
+    // Upload from file buffer
+    const fileBuffer = fs.readFileSync('/path/to/file.pdf');
+    
+    const uploadStatus = core.storage.uploadFile({
+      fileBuffer: fileBuffer,
+      fileName: 'document.pdf',
+      isPrivate: true,
+      folder: 'Home/Attachments'
+    });
+    
+    uploadStatus.subscribe(status => {
+      if (status.status === 'completed') {
+        console.log('File uploaded:', status.requestResponse.data.name);
+      }
+    });
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+The SDK automatically tries Socket.IO upload first for progress tracking, then falls back to HTTP upload if Socket.IO is unavailable.
+</Note>
+
+### Upload with Document Attachment
+
+Attach files to specific documents:
+
+```typescript Attach to Document
+const customer = await core.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (customer.success) {
+  const uploadStatus = core.storage.uploadFile({
+    file: file,
+    isPrivate: false,
+    doctype: 'Customer',
+    docname: customer.data.name,
+    docfield: 'image'  // Optional: specific field to attach to
+  });
+  
+  uploadStatus.subscribe(status => {
+    if (status.status === 'completed') {
+      console.log('File attached to customer');
+      
+      // The document field is automatically updated
+      const fileUrl = status.requestResponse.data.file_url;
+      console.log('Image URL:', fileUrl);
+    }
+  });
+}
+```
+
+## Progress Tracking
+
+### Monitor Upload Progress
+
+Track upload progress in real-time:
+
+```typescript Progress Tracking
+const uploadStatus = core.storage.uploadFile({
+  file: largeFile,
+  folder: 'Home'
+});
+
+uploadStatus.subscribe(status => {
+  switch (status.status) {
+    case 'uploading':
+      if (status.hasProgress) {
+        // Update progress bar
+        const percent = status.progress;
+        console.log(`Upload progress: ${percent}%`);
+        updateProgressBar(percent);
+      } else {
+        console.log('Uploading (no progress available)');
+      }
+      break;
+      
+    case 'completed':
+      console.log('Upload completed!');
+      const response = status.requestResponse;
+      console.log('File name:', response.data.file_name);
+      console.log('File URL:', response.data.file_url);
+      console.log('Is private:', response.data.is_private);
+      break;
+      
+    case 'error':
+      console.error('Upload failed');
+      const error = status.requestResponse.error;
+      console.error('Error:', error);
+      showErrorMessage(error.info.cause);
+      break;
+  }
+});
+
+function updateProgressBar(percent: number) {
+  const progressBar = document.getElementById('progress-bar');
+  progressBar.style.width = percent + '%';
+  progressBar.textContent = percent + '%';
+}
+```
+
+### Progress Bar Component
+
+Build a complete upload UI:
+
+```typescript Upload Component
+class FileUploader {
+  private progressElement: HTMLElement;
+  private statusElement: HTMLElement;
+  
+  constructor(
+    private core: Renovation,
+    progressElementId: string,
+    statusElementId: string
+  ) {
+    this.progressElement = document.getElementById(progressElementId);
+    this.statusElement = document.getElementById(statusElementId);
+  }
+  
+  upload(file: File, folder: string = 'Home') {
+    this.setStatus('Preparing upload...');
+    
+    const uploadStatus = this.core.storage.uploadFile({
+      file: file,
+      folder: folder,
+      isPrivate: false
+    });
+    
+    uploadStatus.subscribe(status => {
+      if (status.status === 'uploading') {
+        if (status.hasProgress) {
+          this.updateProgress(status.progress);
+          this.setStatus(`Uploading ${status.fileName}: ${status.progress}%`);
+        } else {
+          this.setStatus(`Uploading ${status.fileName}...`);
+        }
+      } else if (status.status === 'completed') {
+        this.updateProgress(100);
+        this.setStatus('Upload completed!');
+        this.onUploadComplete(status.requestResponse.data);
+      } else if (status.status === 'error') {
+        this.setStatus('Upload failed: ' + status.requestResponse.error.title);
+      }
+    });
+  }
+  
+  private updateProgress(percent: number) {
+    this.progressElement.style.width = percent + '%';
+  }
+  
+  private setStatus(message: string) {
+    this.statusElement.textContent = message;
+  }
+  
+  private onUploadComplete(fileData: any) {
+    console.log('File uploaded:', fileData);
+    // Handle completion (e.g., display thumbnail, add to list)
+  }
+}
+
+// Usage
+const uploader = new FileUploader(core, 'progress-bar', 'status-text');
+const fileInput = document.querySelector('input[type="file"]');
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  uploader.upload(file, 'Home/Uploads');
+});
+```
+
+## File URL Management
+
+### Get File URLs
+
+Convert file paths to accessible URLs:
+
+```typescript Get File URL
+// Get full URL for a file
+const filePath = '/files/document.pdf';
+const fileUrl = core.storage.getUrl(filePath);
+
+console.log('File URL:', fileUrl);
+// Output: https://your-frappe-site.com/files/document.pdf
+
+// Handle null/undefined gracefully
+const nullPath = null;
+const nullUrl = core.storage.getUrl(nullPath);
+console.log('Null URL:', nullUrl);  // Output: null
+```
+
+### Display Images
+
+```typescript Image Display
+function displayImage(filePath: string) {
+  const imageUrl = core.storage.getUrl(filePath);
+  
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    document.body.appendChild(img);
+  }
+}
+
+// Get document with image field
+const customer = await core.model.getDoc({
+  doctype: 'Customer',
+  docname: 'CUST-00001'
+});
+
+if (customer.success && customer.data.image) {
+  displayImage(customer.data.image);
+}
+```
+
+## Folder Management
+
+### Create Folders
+
+Organize files by creating folder structures:
+
+```typescript Create Folder
+const createResponse = await core.storage.createFolder(
+  'Invoices',
+  'Home/Documents'
+);
+
+if (createResponse.success) {
+  console.log('Folder created:', createResponse.data);
+} else {
+  console.error('Failed to create folder:', createResponse.error);
+}
+```
+
+<Warning>
+Folder names cannot contain forward slashes (`/`). Use them only as separators in paths.
+</Warning>
+
+### Check Folder Exists
+
+Verify if a folder exists before operations:
+
+```typescript Check Folder
+const existsResponse = await core.storage.checkFolderExists(
+  'Home/Documents/Invoices'
+);
+
+if (existsResponse.success) {
+  if (existsResponse.data) {
+    console.log('Folder exists');
+  } else {
+    console.log('Folder does not exist');
+    // Create it
+    await core.storage.createFolder('Invoices', 'Home/Documents');
+  }
+}
+```
+
+### Create Nested Folders
+
+```typescript Nested Folders
+async function createFolderPath(path: string) {
+  const parts = path.split('/');
+  let currentPath = parts[0];
+  
+  for (let i = 1; i < parts.length; i++) {
+    const nextPath = currentPath + '/' + parts[i];
+    
+    const exists = await core.storage.checkFolderExists(nextPath);
+    
+    if (!exists.data) {
+      await core.storage.createFolder(parts[i], currentPath);
+      console.log('Created folder:', nextPath);
+    }
+    
+    currentPath = nextPath;
+  }
+}
+
+// Create nested structure
+await createFolderPath('Home/Documents/2024/Invoices');
+```
+
+## Upload Patterns
+
+### Multiple File Upload
+
+Upload multiple files with progress tracking:
+
+```typescript Multiple Upload
+class MultiFileUploader {
+  private uploads: Map<string, any> = new Map();
+  
+  constructor(private core: Renovation) {}
+  
+  uploadFiles(files: FileList, folder: string) {
+    Array.from(files).forEach((file, index) => {
+      const uploadId = `upload-${index}`;
+      
+      const uploadStatus = this.core.storage.uploadFile({
+        file: file,
+        folder: folder,
+        isPrivate: false
+      });
+      
+      this.uploads.set(uploadId, {
+        fileName: file.name,
+        status: uploadStatus
+      });
+      
+      uploadStatus.subscribe(status => {
+        this.handleUploadStatus(uploadId, status);
+      });
+    });
+  }
+  
+  private handleUploadStatus(uploadId: string, status: any) {
+    const upload = this.uploads.get(uploadId);
+    
+    console.log(`[${upload.fileName}] Status: ${status.status}`);
+    
+    if (status.status === 'uploading' && status.hasProgress) {
+      console.log(`[${upload.fileName}] Progress: ${status.progress}%`);
+    } else if (status.status === 'completed') {
+      console.log(`[${upload.fileName}] Completed!`);
+      const fileUrl = status.requestResponse.data.file_url;
+      console.log(`[${upload.fileName}] URL: ${fileUrl}`);
+    }
+  }
+  
+  getProgress(): number {
+    let totalProgress = 0;
+    this.uploads.forEach(upload => {
+      // Calculate average progress
+    });
+    return totalProgress / this.uploads.size;
+  }
+}
+
+// Usage
+const uploader = new MultiFileUploader(core);
+const fileInput = document.querySelector('input[type="file"][multiple]');
+
+fileInput.addEventListener('change', (e) => {
+  uploader.uploadFiles(e.target.files, 'Home/Bulk-Upload');
+});
+```
+
+### Drag and Drop Upload
+
+```typescript Drag and Drop
+class DragDropUploader {
+  constructor(
+    private core: Renovation,
+    private dropZone: HTMLElement,
+    private folder: string = 'Home'
+  ) {
+    this.setupDropZone();
+  }
+  
+  private setupDropZone() {
+    this.dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.add('drag-over');
+    });
+    
+    this.dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.remove('drag-over');
+    });
+    
+    this.dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.remove('drag-over');
+      
+      const files = e.dataTransfer.files;
+      this.uploadFiles(files);
+    });
+  }
+  
+  private uploadFiles(files: FileList) {
+    Array.from(files).forEach(file => {
+      console.log('Uploading:', file.name);
+      
+      const uploadStatus = this.core.storage.uploadFile({
+        file: file,
+        folder: this.folder,
+        isPrivate: false
+      });
+      
+      uploadStatus.subscribe(status => {
+        if (status.status === 'completed') {
+          this.onUploadComplete(file.name, status.requestResponse.data);
+        }
+      });
+    });
+  }
+  
+  private onUploadComplete(fileName: string, fileData: any) {
+    console.log(`${fileName} uploaded:`, fileData.file_url);
+  }
+}
+
+// Usage
+const dropZone = document.getElementById('drop-zone');
+const dragDropUploader = new DragDropUploader(core, dropZone, 'Home/Uploads');
+```
+
+### File Type Validation
+
+```typescript File Validation
+function validateAndUpload(file: File, allowedTypes: string[]) {
+  // Check file type
+  if (!allowedTypes.includes(file.type)) {
+    console.error('Invalid file type:', file.type);
+    return;
+  }
+  
+  // Check file size (10MB limit)
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    console.error('File too large:', file.size);
+    return;
+  }
+  
+  // Upload
+  const uploadStatus = core.storage.uploadFile({
+    file: file,
+    folder: 'Home/Validated-Uploads'
+  });
+  
+  uploadStatus.subscribe(status => {
+    if (status.status === 'completed') {
+      console.log('File uploaded successfully');
+    }
+  });
+}
+
+// Usage
+const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+const fileInput = document.querySelector('input[type="file"]');
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  validateAndUpload(file, allowedTypes);
+});
+```
+
+## Private vs Public Files
+
+### Private Files
+
+Private files require authentication to access:
+
+```typescript Private Upload
+const uploadStatus = core.storage.uploadFile({
+  file: confidentialFile,
+  isPrivate: true,  // Requires authentication to access
+  folder: 'Home/Private'
+});
+```
+
+### Public Files
+
+Public files are accessible without authentication:
+
+```typescript Public Upload
+const uploadStatus = core.storage.uploadFile({
+  file: publicImage,
+  isPrivate: false,  // Publicly accessible
+  folder: 'Home/Public'
+});
+```
+
+## Best Practices
+
+1. **File validation**: Always validate file types and sizes before upload.
+
+2. **Progress tracking**: Provide visual feedback for uploads, especially large files.
+
+3. **Error handling**: Handle upload failures gracefully with retry options.
+
+4. **Folder organization**: Create logical folder structures for better file management.
+
+5. **Private by default**: Consider making files private unless they need to be public.
+
+6. **Cleanup**: Remove failed or cancelled uploads from the UI.
+
+7. **Socket.IO connection**: Connect Socket.IO for better upload progress tracking.
+
+## Troubleshooting
+
+<Tabs>
+  <Tab title="No Progress Updates">
+    ```typescript
+    // Check if Socket.IO is connected
+    if (!core.socketio.isConnected) {
+      console.warn('Socket.IO not connected, progress tracking unavailable');
+      core.socketio.connect();
+    }
+    
+    // Subscribe to upload status
+    uploadStatus.subscribe(status => {
+      if (!status.hasProgress) {
+        console.log('Upload in progress (no progress tracking)');
+      }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Upload Failed">
+    ```typescript
+    uploadStatus.subscribe(status => {
+      if (status.status === 'error') {
+        const error = status.requestResponse.error;
+        
+        console.error('Upload error:', error.title);
+        console.error('Cause:', error.info?.cause);
+        console.error('Suggestion:', error.info?.suggestion);
+        
+        // Retry upload
+        if (error.info?.httpCode >= 500) {
+          console.log('Server error, retrying...');
+          // Implement retry logic
+        }
+      }
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Related Resources
+
+- [Storage Controller API](/api/storage-controller)
+- [Document Operations](/guides/document-operations)
+- [Real-time Features](/guides/realtime)

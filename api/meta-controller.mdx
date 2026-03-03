@@ -1,0 +1,446 @@
+---
+title: 'MetaController'
+description: 'Complete API reference for doctype metadata operations in Renovation Core SDK'
+---
+
+## Overview
+
+The `MetaController` handles operations related to doctype metadata, including retrieving doctype definitions, field information, document counts, and report metadata.
+
+## Doctype Metadata
+
+### getDocMeta()
+
+Retrieves doctype metadata from cache or backend.
+
+```typescript
+const response = await core.meta.getDocMeta({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="getDocMetaParams" type="GetDocMetaParams" required>
+  Metadata retrieval parameters
+  <Expandable title="GetDocMetaParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="DocType">
+  Doctype metadata including fields, permissions, and settings
+  <Expandable title="DocType properties">
+    <ResponseField name="name" type="string">
+      Doctype name
+    </ResponseField>
+    <ResponseField name="fields" type="DocField[]">
+      List of fields
+    </ResponseField>
+    <ResponseField name="permissions" type="DocPerm[]">
+      Permission rules
+    </ResponseField>
+    <ResponseField name="isSubmittable" type="boolean">
+      Whether doctype is submittable
+    </ResponseField>
+    <ResponseField name="isTable" type="boolean">
+      Whether doctype is a child table
+    </ResponseField>
+    <ResponseField name="isSingle" type="boolean">
+      Whether doctype is a single document
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+Metadata is cached after first retrieval for performance. Use cache invalidation if needed.
+</Note>
+
+### getFieldLabel()
+
+Gets the translated label for a field.
+
+```typescript
+const label = await core.meta.getFieldLabel({
+  doctype: 'Sales Invoice',
+  fieldname: 'customer'
+});
+// Returns: "Customer" (translated)
+```
+
+<ParamField path="getFieldLabelParams" type="GetFieldLabelParams" required>
+  Field label parameters
+  <Expandable title="GetFieldLabelParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="fieldname" type="string" required>
+      Field name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Translated field label
+</ResponseField>
+
+## Document Information
+
+### getDocInfo()
+
+Retrieves detailed information about a specific document.
+
+```typescript
+const response = await core.meta.getDocInfo({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="getDocInfoParams" type="GetDocInfoParams" required>
+  Document info parameters
+  <Expandable title="GetDocInfoParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="docname" type="string" required>
+      Document name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="DocInfo">
+  Document information
+  <Expandable title="DocInfo properties">
+    <ResponseField name="attachments" type="array">
+      List of file attachments
+      <Expandable title="Attachment properties">
+        <ResponseField name="file_name" type="string">
+          Name of the file
+        </ResponseField>
+        <ResponseField name="file_url" type="string">
+          URL to access the file
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Attachment document name
+        </ResponseField>
+        <ResponseField name="is_private" type="string">
+          Privacy setting
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="communications" type="array">
+      Email and communication history
+    </ResponseField>
+    <ResponseField name="comments" type="array">
+      Document comments
+    </ResponseField>
+    <ResponseField name="versions" type="array">
+      Document version history
+      <Expandable title="Version properties">
+        <ResponseField name="owner" type="string">
+          User who made the change
+        </ResponseField>
+        <ResponseField name="creation" type="string">
+          Timestamp
+        </ResponseField>
+        <ResponseField name="data" type="string">
+          Version diff data
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="permissions" type="DocPerm">
+      User-specific permissions for this document
+    </ResponseField>
+    <ResponseField name="shared" type="array">
+      Users with whom document is shared
+    </ResponseField>
+    <ResponseField name="assignments" type="array">
+      Current assignments
+    </ResponseField>
+    <ResponseField name="total_comments" type="number">
+      Total comment count
+    </ResponseField>
+    <ResponseField name="rating" type="number">
+      Document rating
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### getDocCount()
+
+Gets the total number of documents matching filters.
+
+```typescript
+const response = await core.meta.getDocCount({
+  doctype: 'Sales Invoice',
+  filters: {
+    status: 'Draft',
+    customer: 'CUST-001'
+  }
+});
+```
+
+<ParamField path="getDocCountParams" type="GetDocCountParams" required>
+  Count parameters
+  <Expandable title="GetDocCountParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="filters" type="DBFilter">
+      Filter conditions
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="number">
+  Total document count
+</ResponseField>
+
+## Report Metadata
+
+### getReportMeta()
+
+Retrieves metadata for a Renovation Report.
+
+```typescript
+const response = await core.meta.getReportMeta({
+  report: 'Sales Analytics'
+});
+```
+
+<ParamField path="getReportMetaParams" type="GetReportMetaParams" required>
+  Report metadata parameters
+  <Expandable title="GetReportMetaParams properties">
+    <ParamField path="report" type="string" required>
+      Report name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="ReportMeta">
+  Report metadata
+  <Expandable title="ReportMeta properties">
+    <ResponseField name="name" type="string">
+      Report name
+    </ResponseField>
+    <ResponseField name="doctype" type="string">
+      Base doctype
+    </ResponseField>
+    <ResponseField name="report" type="string">
+      Report identifier
+    </ResponseField>
+    <ResponseField name="filters" type="array">
+      Report filter definitions
+      <Expandable title="Filter properties">
+        <ResponseField name="fieldname" type="string">
+          Filter field name
+        </ResponseField>
+        <ResponseField name="fieldtype" type="DocFieldTypes">
+          Field type
+        </ResponseField>
+        <ResponseField name="label" type="string">
+          Filter label
+        </ResponseField>
+        <ResponseField name="options" type="string">
+          Field options
+        </ResponseField>
+        <ResponseField name="default_value" type="string">
+          Default filter value
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+## Cache Management
+
+### clearCache()
+
+Clears all cached doctype metadata.
+
+```typescript
+core.meta.clearCache();
+```
+
+This forces fresh retrieval of all doctype metadata on next access.
+
+### docTypeCache
+
+Direct access to the doctype cache object.
+
+```typescript
+// Get cached doctype
+const cachedDocType = core.meta.docTypeCache['Sales Invoice'];
+
+// Check if doctype is cached
+if (core.meta.docTypeCache['Sales Invoice']) {
+  console.log('DocType is cached');
+}
+```
+
+<ResponseField name="docTypeCache" type="{ [doctype: string]: DocType }">
+  Object containing cached doctype metadata
+</ResponseField>
+
+<Warning>
+Direct cache manipulation is not recommended. Use `clearCache()` to invalidate cache.
+</Warning>
+
+## Code Examples
+
+### Working with Doctype Metadata
+
+<CodeGroup>
+```typescript Get Field Information
+const response = await core.meta.getDocMeta({
+  doctype: 'Sales Invoice'
+});
+
+if (response.success) {
+  const doctype = response.data;
+  
+  // Get all fields
+  console.log('Fields:', doctype.fields.length);
+  
+  // Find specific field
+  const customerField = doctype.fields.find(
+    f => f.fieldname === 'customer'
+  );
+  
+  console.log('Customer field type:', customerField.fieldtype);
+  console.log('Is required:', customerField.reqd);
+  
+  // Get translated label
+  const label = await core.meta.getFieldLabel({
+    doctype: 'Sales Invoice',
+    fieldname: 'customer'
+  });
+  console.log('Translated label:', label);
+}
+```
+
+```typescript Document Statistics
+// Get document count
+const countResponse = await core.meta.getDocCount({
+  doctype: 'Sales Invoice',
+  filters: {
+    status: 'Draft',
+    posting_date: ['>', '2024-01-01']
+  }
+});
+
+console.log(`Found ${countResponse.data} draft invoices`);
+
+// Get document info
+const infoResponse = await core.meta.getDocInfo({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+
+if (infoResponse.success) {
+  const info = infoResponse.data;
+  console.log('Attachments:', info.attachments.length);
+  console.log('Comments:', info.total_comments);
+  console.log('Versions:', info.versions.length);
+}
+```
+
+```typescript Report Metadata
+const response = await core.meta.getReportMeta({
+  report: 'Sales Analytics'
+});
+
+if (response.success) {
+  const report = response.data;
+  
+  console.log('Report name:', report.name);
+  console.log('Available filters:');
+  
+  report.filters.forEach(filter => {
+    console.log(`  ${filter.label} (${filter.fieldtype})`);
+    if (filter.default_value) {
+      console.log(`    Default: ${filter.default_value}`);
+    }
+  });
+}
+```
+</CodeGroup>
+
+### Dynamic Form Building
+
+```typescript
+// Build form based on metadata
+const response = await core.meta.getDocMeta({
+  doctype: 'Sales Invoice'
+});
+
+if (response.success) {
+  const doctype = response.data;
+  
+  // Filter visible fields
+  const visibleFields = doctype.fields.filter(
+    f => !f.hidden && !f.is_custom
+  );
+  
+  // Group by field type
+  const fieldsByType = visibleFields.reduce((acc, field) => {
+    acc[field.fieldtype] = acc[field.fieldtype] || [];
+    acc[field.fieldtype].push(field);
+    return acc;
+  }, {});
+  
+  // Build form sections
+  const sections = [];
+  let currentSection = null;
+  
+  for (const field of visibleFields) {
+    if (field.fieldtype === 'Section Break') {
+      currentSection = {
+        label: field.label,
+        fields: []
+      };
+      sections.push(currentSection);
+    } else if (currentSection) {
+      currentSection.fields.push({
+        name: field.fieldname,
+        label: field.label,
+        type: field.fieldtype,
+        required: field.reqd,
+        options: field.options
+      });
+    }
+  }
+  
+  console.log('Form sections:', sections);
+}
+```
+
+### Checking Field Properties
+
+```typescript
+async function isFieldEditable(doctype: string, fieldname: string): Promise<boolean> {
+  const response = await core.meta.getDocMeta({ doctype });
+  
+  if (response.success) {
+    const field = response.data.fields.find(f => f.fieldname === fieldname);
+    
+    if (!field) return false;
+    
+    return !field.read_only && 
+           !field.hidden && 
+           field.fieldtype !== 'Section Break' &&
+           field.fieldtype !== 'Column Break';
+  }
+  
+  return false;
+}
+
+// Usage
+const editable = await isFieldEditable('Sales Invoice', 'customer');
+console.log('Customer field editable:', editable);
+```

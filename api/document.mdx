@@ -1,0 +1,208 @@
+---
+title: 'RenovationDocument'
+description: 'Core document class for handling Frappe documents in Renovation SDK'
+---
+
+## Overview
+
+`RenovationDocument` is the fundamental class for working with Frappe documents in the Renovation Core SDK. It provides a flexible structure that transforms raw objects into structured document instances with enumerable properties.
+
+## Class Structure
+
+```typescript
+class RenovationDocument {
+  [x: string]: any;
+  
+  constructor(obj?: any)
+}
+```
+
+## Constructor
+
+### RenovationDocument(obj?)
+
+Creates a new `RenovationDocument` instance with properties from the input object.
+
+<ParamField path="obj" type="object" optional>
+  The raw object to transform into a `RenovationDocument`. Must include a `doctype` property.
+</ParamField>
+
+#### Behavior
+
+- **Validation**: The constructor validates that the input object contains a `doctype` property. If `doctype` is missing, it throws an error.
+- **Property Definition**: All properties from the input object are defined with:
+  - `writable: true` - Properties can be modified
+  - `enumerable: true` - Properties appear in iterations
+  - `configurable: true` - Property definitions can be changed
+
+#### Throws
+
+<ResponseField name="Error" type="Error">
+  Throws `"Invalid object for doctype"` when the input object doesn't contain a `doctype` property.
+</ResponseField>
+
+## Properties
+
+<ParamField path="[key: string]" type="any">
+  Dynamic properties based on the input object. The class uses an index signature to allow any property to be added at runtime.
+</ParamField>
+
+<ParamField path="doctype" type="string" required>
+  The document type name. This property is required for all Renovation documents and identifies the type of document being worked with.
+</ParamField>
+
+## Usage Examples
+
+### Creating a Document
+
+```typescript
+import RenovationDocument from '@renovationjs/core/model/document';
+
+// Create a new document with required doctype
+const item = new RenovationDocument({
+  doctype: 'Item',
+  item_code: 'ITEM-001',
+  item_name: 'Sample Item',
+  description: 'A sample product',
+  standard_rate: 100.00
+});
+
+console.log(item.doctype); // 'Item'
+console.log(item.item_code); // 'ITEM-001'
+```
+
+### Modifying Properties
+
+```typescript
+// Properties are writable
+item.standard_rate = 150.00;
+item.item_name = 'Updated Item Name';
+
+// Add new properties
+item.custom_field = 'custom value';
+```
+
+### Iterating Over Properties
+
+```typescript
+// Properties are enumerable
+for (const key in item) {
+  console.log(`${key}: ${item[key]}`);
+}
+
+// Or using Object.keys()
+const keys = Object.keys(item);
+console.log(keys); // ['doctype', 'item_code', 'item_name', ...]
+```
+
+### Error Handling
+
+```typescript
+try {
+  // This will throw an error
+  const invalid = new RenovationDocument({
+    name: 'No Doctype'
+  });
+} catch (error) {
+  console.error(error.message); // 'Invalid object for doctype'
+}
+
+// Creating an empty document (valid)
+const empty = new RenovationDocument();
+console.log(empty); // {}
+```
+
+### Working with API Responses
+
+```typescript
+// Transform API response to RenovationDocument
+const apiResponse = {
+  doctype: 'Customer',
+  name: 'CUST-001',
+  customer_name: 'John Doe',
+  email: 'john@example.com',
+  phone: '+1234567890'
+};
+
+const customer = new RenovationDocument(apiResponse);
+
+// Access properties directly
+if (customer.email) {
+  console.log(`Contact: ${customer.email}`);
+}
+```
+
+### Type-Safe Usage with TypeScript
+
+```typescript
+interface ItemDoc extends RenovationDocument {
+  doctype: 'Item';
+  item_code: string;
+  item_name: string;
+  description?: string;
+  standard_rate: number;
+}
+
+const typedItem = new RenovationDocument({
+  doctype: 'Item',
+  item_code: 'ITEM-002',
+  item_name: 'Typed Item',
+  standard_rate: 200
+}) as ItemDoc;
+
+// Now with type safety
+const rate: number = typedItem.standard_rate;
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Include Doctype">
+    Ensure every object passed to `RenovationDocument` includes the `doctype` property:
+    
+    ```typescript
+    // Good
+    const doc = new RenovationDocument({ doctype: 'Item', name: 'item-001' });
+    
+    // Bad - will throw error
+    const doc = new RenovationDocument({ name: 'item-001' });
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Type Definitions">
+    Define TypeScript interfaces for your document types to get better IDE support and type safety:
+    
+    ```typescript
+    interface CustomerDoc extends RenovationDocument {
+      doctype: 'Customer';
+      customer_name: string;
+      email: string;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle Optional Objects">
+    The constructor accepts optional objects, so check for undefined when working with dynamic data:
+    
+    ```typescript
+    const data = await fetchData();
+    const doc = data ? new RenovationDocument(data) : null;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Classes
+
+<CardGroup cols={2}>
+  <Card title="DocType" icon="database" href="/api/doctype">
+    Learn about document type metadata and structure
+  </Card>
+  
+  <Card title="DocField" icon="input-text" href="/api/docfield">
+    Explore document field definitions and properties
+  </Card>
+</CardGroup>
+
+## Source Reference
+
+Location: `~/workspace/source/src/model/document.ts:4`

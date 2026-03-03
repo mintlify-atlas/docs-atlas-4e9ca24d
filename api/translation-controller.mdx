@@ -1,0 +1,375 @@
+---
+title: 'TranslationController'
+description: 'Complete API reference for internationalization and translation in Renovation Core SDK'
+---
+
+## Overview
+
+The `TranslationController` manages translations, language settings, and internationalization for the application.
+
+## Language Management
+
+### setCurrentLanguage()
+
+Sets the current language for translations.
+
+```typescript
+core.translate.setCurrentLanguage({
+  lang: 'ar'
+});
+```
+
+<ParamField path="setCurrentLanguageParams" type="SetCurrentLanguageParams" required>
+  Language setting parameters
+  <Expandable title="SetCurrentLanguageParams properties">
+    <ParamField path="lang" type="string" required>
+      Language code (e.g., 'en', 'ar', 'es', 'fr')
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### getCurrentLanguage()
+
+Gets the current language.
+
+```typescript
+const currentLang = core.translate.getCurrentLanguage();
+// Returns: 'en'
+```
+
+<ResponseField name="return" type="string">
+  Current language code
+</ResponseField>
+
+## Translation Loading
+
+### loadTranslations()
+
+Loads translation dictionary for a specific language from the backend.
+
+```typescript
+const response = await core.translate.loadTranslations({
+  lang: 'ar'
+});
+```
+
+<ParamField path="loadTranslationsParams" type="LoadTranslationsParams">
+  Translation loading parameters
+  <Expandable title="LoadTranslationsParams properties">
+    <ParamField path="lang" type="string">
+      Language to load. Default: current language
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="{ [key: string]: string }">
+  Dictionary of translations (key: translated value)
+</ResponseField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+## Message Translation
+
+### getMessage()
+
+Gets the translated message for a given key.
+
+```typescript
+const translated = core.translate.getMessage({
+  txt: 'Submit',
+  lang: 'ar'
+});
+// Returns: 'إرسال'
+```
+
+<ParamField path="getMessageParams" type="GetMessageParams" required>
+  Message retrieval parameters
+  <Expandable title="GetMessageParams properties">
+    <ParamField path="txt" type="string" required>
+      Text or key to translate
+    </ParamField>
+    <ParamField path="lang" type="string">
+      Language code. Default: current language
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Translated message or original text if translation not found
+</ResponseField>
+
+## Dictionary Management
+
+### setMessagesDict()
+
+Sets/overwrites the entire messages dictionary for a language.
+
+```typescript
+core.translate.setMessagesDict({
+  dict: {
+    'Hello': 'مرحبا',
+    'Goodbye': 'وداعا',
+    'Submit': 'إرسال'
+  },
+  lang: 'ar'
+});
+```
+
+<ParamField path="setMessagesDictParams" type="SetMessagesDictParams" required>
+  Dictionary setting parameters
+  <Expandable title="SetMessagesDictParams properties">
+    <ParamField path="dict" type="{ [key: string]: string }" required>
+      Translation dictionary
+    </ParamField>
+    <ParamField path="lang" type="string">
+      Language code. Default: current language
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<Warning>
+This overwrites the entire dictionary for the language. Use `extendDictionary()` to add translations.
+</Warning>
+
+### extendDictionary()
+
+Adds translations to the existing dictionary without overwriting.
+
+```typescript
+core.translate.extendDictionary({
+  dict: {
+    'New Entry': 'إدخال جديد',
+    'Another Entry': 'إدخال آخر'
+  },
+  lang: 'ar'
+});
+```
+
+<ParamField path="extendDictParams" type="ExtendDictParams" required>
+  Dictionary extension parameters
+  <Expandable title="ExtendDictParams properties">
+    <ParamField path="dict" type="{ [key: string]: string }" required>
+      Translations to add
+    </ParamField>
+    <ParamField path="lang" type="string">
+      Language code. Default: current language
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Cache Management
+
+### clearCache()
+
+Clears translation cache.
+
+```typescript
+core.translate.clearCache();
+```
+
+<Note>
+Currently an empty method. Translation dictionaries persist in memory.
+</Note>
+
+## Code Examples
+
+### Complete i18n Setup
+
+<CodeGroup>
+```typescript Initial Setup
+// Set default language
+core.translate.setCurrentLanguage({ lang: 'en' });
+
+// Load translations from backend
+const response = await core.translate.loadTranslations({
+  lang: 'en'
+});
+
+if (response.success) {
+  console.log('Translations loaded:', Object.keys(response.data).length);
+}
+```
+
+```typescript Language Switching
+async function switchLanguage(lang: string) {
+  // Set new language
+  core.translate.setCurrentLanguage({ lang });
+  
+  // Load translations
+  const response = await core.translate.loadTranslations({ lang });
+  
+  if (response.success) {
+    // Update UI
+    updateAllLabels();
+    console.log(`Switched to ${lang}`);
+  }
+}
+
+// Usage
+await switchLanguage('ar');
+```
+
+```typescript Using Translations
+// Simple translation
+const submitText = core.translate.getMessage({
+  txt: 'Submit'
+});
+
+// With specific language
+const submitInArabic = core.translate.getMessage({
+  txt: 'Submit',
+  lang: 'ar'
+});
+
+// Returns original if not found
+const custom = core.translate.getMessage({
+  txt: 'My Custom Text'
+});
+// Returns: 'My Custom Text' (if not in dictionary)
+```
+</CodeGroup>
+
+### Custom Translations
+
+```typescript
+// Add custom translations
+core.translate.extendDictionary({
+  dict: {
+    'Invoice': 'فاتورة',
+    'Customer': 'عميل',
+    'Total': 'المجموع',
+    'Date': 'التاريخ',
+    'Status': 'الحالة'
+  },
+  lang: 'ar'
+});
+
+// Use translations in forms
+function getFieldLabel(fieldname: string): string {
+  return core.translate.getMessage({
+    txt: fieldname
+  });
+}
+
+console.log(getFieldLabel('Customer')); // 'عميل' (Arabic)
+```
+
+### Multi-Language Support
+
+```typescript
+// Define supported languages
+const supportedLanguages = [
+  { code: 'en', name: 'English' },
+  { code: 'ar', name: 'العربية' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' }
+];
+
+// Load all languages
+async function loadAllLanguages() {
+  for (const language of supportedLanguages) {
+    const response = await core.translate.loadTranslations({
+      lang: language.code
+    });
+    
+    if (response.success) {
+      console.log(`Loaded ${language.name}`);
+    }
+  }
+}
+
+// Get translation in any loaded language
+function getTranslation(text: string, lang: string): string {
+  return core.translate.getMessage({
+    txt: text,
+    lang: lang
+  });
+}
+
+// Example: Get "Submit" in all languages
+supportedLanguages.forEach(lang => {
+  const translation = getTranslation('Submit', lang.code);
+  console.log(`${lang.name}: ${translation}`);
+});
+```
+
+### Translation Helper Functions
+
+```typescript
+// Translation helper with fallback
+function translate(
+  key: string,
+  fallback?: string,
+  lang?: string
+): string {
+  const translated = core.translate.getMessage({
+    txt: key,
+    lang: lang || core.translate.getCurrentLanguage()
+  });
+  
+  // Return fallback if translation equals key (not found)
+  return translated === key && fallback ? fallback : translated;
+}
+
+// Usage
+const label = translate('CustomerName', 'Customer Name');
+
+// Interpolation helper
+function translateWithParams(
+  key: string,
+  params: { [key: string]: string }
+): string {
+  let translated = core.translate.getMessage({ txt: key });
+  
+  // Replace placeholders
+  Object.keys(params).forEach(param => {
+    translated = translated.replace(`{${param}}`, params[param]);
+  });
+  
+  return translated;
+}
+
+// Add translation with placeholders
+core.translate.extendDictionary({
+  dict: {
+    'Welcome {name}': 'مرحبا {name}',
+    'You have {count} notifications': 'لديك {count} إشعارات'
+  },
+  lang: 'ar'
+});
+
+// Use with parameters
+const welcome = translateWithParams('Welcome {name}', { name: 'Ahmed' });
+// Returns: 'مرحبا Ahmed'
+
+const notifications = translateWithParams(
+  'You have {count} notifications',
+  { count: '5' }
+);
+// Returns: 'لديك 5 إشعارات'
+```
+
+### Integration with Components
+
+```typescript
+// React component example
+function TranslatedButton({ textKey }: { textKey: string }) {
+  const [text, setText] = useState('');
+  
+  useEffect(() => {
+    // Get translated text
+    const translated = core.translate.getMessage({
+      txt: textKey
+    });
+    setText(translated);
+  }, [textKey]);
+  
+  return <button>{text}</button>;
+}
+
+// Usage
+<TranslatedButton textKey="Submit" />
+<TranslatedButton textKey="Cancel" />
+```

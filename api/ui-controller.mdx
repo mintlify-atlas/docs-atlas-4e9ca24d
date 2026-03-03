@@ -1,0 +1,476 @@
+---
+title: 'UIController'
+description: 'Complete API reference for UI management and field control in Renovation Core SDK'
+---
+
+## Overview
+
+The `UIController` manages UI state, field visibility, read-only status, and field refresh hooks for dynamic forms.
+
+## Field Visibility
+
+### setVisibility()
+
+Shows or hides a field.
+
+```typescript
+core.ui.setVisibility('Sales Invoice', 'tax_amount', true);  // Show
+core.ui.setVisibility('Sales Invoice', 'tax_amount', false); // Hide
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Field name to control
+</ParamField>
+
+<ParamField path="show" type="boolean" required>
+  True to show, false to hide
+</ParamField>
+
+### setReadOnly()
+
+Sets a field as read-only or editable.
+
+```typescript
+core.ui.setReadOnly('Sales Invoice', 'customer', true);  // Read-only
+core.ui.setReadOnly('Sales Invoice', 'customer', false); // Editable
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Field name to control
+</ParamField>
+
+<ParamField path="readOnly" type="boolean" required>
+  True for read-only, false for editable
+</ParamField>
+
+## Field Refresh
+
+### refreshField()
+
+Triggers refresh for a specific field.
+
+```typescript
+core.ui.refreshField('Sales Invoice', 'total');
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="field" type="string | DocField" required>
+  Field name or DocField object
+</ParamField>
+
+<Note>
+This triggers all registered refresh hooks for the field.
+</Note>
+
+### refreshFields()
+
+Refreshes all registered fields for a doctype.
+
+```typescript
+core.ui.refreshFields('Sales Invoice');
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+### addFieldRefreshHook()
+
+Registers a callback function to be called when a field refreshes.
+
+```typescript
+core.ui.addFieldRefreshHook('Sales Invoice', 'customer', () => {
+  console.log('Customer field refreshed');
+  // Update dependent fields
+  updateCustomerDetails();
+});
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Field name
+</ParamField>
+
+<ParamField path="fn" type="() => void" required>
+  Callback function
+</ParamField>
+
+## Field Registration
+
+### registerField()
+
+Registers a field with the UI controller.
+
+```typescript
+core.ui.registerField('Sales Invoice', field, bindTarget);
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="field" type="DocField | string" required>
+  Field definition or field name
+</ParamField>
+
+<ParamField path="__bindTarget" type="IBindTargetInterface" required>
+  UI component binding target
+</ParamField>
+
+<Note>
+This is typically called automatically by form components.
+</Note>
+
+## Display Dependencies
+
+### checkDisplayDependsOn()
+
+Evaluates display dependencies for a field.
+
+```typescript
+core.ui.checkDisplayDependsOn('Sales Invoice', 'tax_amount');
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="field" type="string | DocField" required>
+  Field to check
+</ParamField>
+
+<Note>
+This evaluates `depends_on` conditions defined in the field metadata.
+</Note>
+
+### checkDisplayDependsOnAll()
+
+Checks display dependencies for all registered fields of a doctype.
+
+```typescript
+core.ui.checkDisplayDependsOnAll('Sales Invoice');
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+## Link Query Options
+
+### setLinkQueryOptions()
+
+Sets custom query options for Link fields.
+
+```typescript
+core.ui.setLinkQueryOptions(
+  'Sales Invoice',
+  'customer',
+  {
+    query: 'custom.queries.get_customers',
+    filters: (core, doc) => {
+      return {
+        territory: doc.territory,
+        customer_group: 'Retail'
+      };
+    }
+  }
+);
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Link field name
+</ParamField>
+
+<ParamField path="options" type="object" required>
+  Query options
+  <Expandable title="Options properties">
+    <ParamField path="query" type="string">
+      Custom backend query method
+    </ParamField>
+    <ParamField path="filters" type="(core, doc) => object">
+      Function returning filter object
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="parentfield" type="string">
+  Parent field (for child table fields)
+</ParamField>
+
+### getLinkQueryOptions()
+
+Gets the link query options for a field.
+
+```typescript
+const options = core.ui.getLinkQueryOptions(
+  'Sales Invoice',
+  'customer'
+);
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Link field name
+</ParamField>
+
+<ParamField path="parentfield" type="string">
+  Parent field (for child table fields)
+</ParamField>
+
+<ResponseField name="return" type="object | undefined">
+  Link query options or undefined if not set
+</ResponseField>
+
+## UI Object Binding
+
+### addUiObj()
+
+Binds a UI component to a field.
+
+```typescript
+core.ui.addUiObj('Sales Invoice', 'customer', componentInstance);
+```
+
+<ParamField path="doctype" type="string" required>
+  Form doctype
+</ParamField>
+
+<ParamField path="fieldname" type="string" required>
+  Field name
+</ParamField>
+
+<ParamField path="obj" type="IBindTargetInterface" required>
+  UI component instance implementing IBindTargetInterface
+</ParamField>
+
+<Note>
+The component must implement a `refresh()` method.
+</Note>
+
+## Cache Management
+
+### clearCache()
+
+Clears UI controller cache.
+
+```typescript
+core.ui.clearCache();
+```
+
+<Note>
+Currently an empty method. UI state persists in memory.
+</Note>
+
+## Code Examples
+
+### Dynamic Field Control
+
+<CodeGroup>
+```typescript Conditional Visibility
+// Hide/show field based on condition
+function updateFieldVisibility(doc) {
+  const showTax = doc.apply_tax === 1;
+  core.ui.setVisibility('Sales Invoice', 'tax_amount', showTax);
+  core.ui.setVisibility('Sales Invoice', 'tax_rate', showTax);
+}
+
+// Call when document changes
+updateFieldVisibility(document);
+```
+
+```typescript Read-only Logic
+// Make fields read-only based on status
+function updateReadOnlyFields(doc) {
+  const isSubmitted = doc.docstatus === 1;
+  
+  // Make most fields read-only when submitted
+  core.ui.setReadOnly('Sales Invoice', 'customer', isSubmitted);
+  core.ui.setReadOnly('Sales Invoice', 'items', isSubmitted);
+  core.ui.setReadOnly('Sales Invoice', 'total', isSubmitted);
+  
+  // But allow some fields to be edited
+  core.ui.setReadOnly('Sales Invoice', 'remarks', false);
+}
+
+updateReadOnlyFields(document);
+```
+
+```typescript Field Dependencies
+// Register field that updates when another changes
+core.ui.addFieldRefreshHook('Sales Invoice', 'customer', () => {
+  // Update customer details when customer changes
+  const customer = document.customer;
+  if (customer) {
+    loadCustomerDefaults(customer).then(defaults => {
+      document.territory = defaults.territory;
+      document.price_list = defaults.default_price_list;
+      
+      // Refresh dependent fields
+      core.ui.refreshField('Sales Invoice', 'territory');
+      core.ui.refreshField('Sales Invoice', 'price_list');
+    });
+  }
+});
+```
+</CodeGroup>
+
+### Link Field Customization
+
+```typescript
+// Custom link query with dynamic filters
+core.ui.setLinkQueryOptions(
+  'Sales Invoice',
+  'item_code',
+  {
+    filters: (core, doc) => {
+      return {
+        item_group: doc.item_group || '',
+        disabled: 0,
+        has_variants: 0
+      };
+    }
+  },
+  'items' // Parent field (child table)
+);
+
+// Complex query with custom method
+core.ui.setLinkQueryOptions(
+  'Sales Order',
+  'customer',
+  {
+    query: 'erpnext.controllers.queries.customer_query',
+    filters: (core, doc) => {
+      const filters = {
+        disabled: 0
+      };
+      
+      if (doc.territory) {
+        filters.territory = doc.territory;
+      }
+      
+      if (doc.customer_group) {
+        filters.customer_group = doc.customer_group;
+      }
+      
+      return filters;
+    }
+  }
+);
+```
+
+### Form Initialization
+
+```typescript
+// Initialize form with field controls
+function initializeForm(doctype: string, doc: RenovationDocument) {
+  // Register refresh hooks
+  core.ui.addFieldRefreshHook(doctype, 'customer', () => {
+    updateCustomerFields(doc);
+  });
+  
+  core.ui.addFieldRefreshHook(doctype, 'currency', () => {
+    recalculateTotals(doc);
+  });
+  
+  // Set up link queries
+  core.ui.setLinkQueryOptions(doctype, 'customer', {
+    filters: (core, doc) => ({
+      disabled: 0,
+      territory: doc.territory
+    })
+  });
+  
+  // Initial field state
+  updateFieldVisibility(doc);
+  updateReadOnlyFields(doc);
+  
+  // Check all dependencies
+  core.ui.checkDisplayDependsOnAll(doctype);
+}
+
+// Usage
+initializeForm('Sales Invoice', invoiceDoc);
+```
+
+### Display Dependencies
+
+```typescript
+// Field with display dependency
+// In DocType field definition: depends_on = "eval:doc.apply_tax"
+
+// The UI controller will automatically show/hide based on condition
+// Manual check can be triggered:
+core.ui.checkDisplayDependsOn('Sales Invoice', 'tax_amount');
+
+// Check all fields after document update
+document.apply_tax = 1;
+core.ui.checkDisplayDependsOnAll('Sales Invoice');
+
+// Complex dependencies with eval
+// depends_on = "eval:doc.status === 'Draft' && doc.total > 1000"
+
+// The UI controller evaluates these expressions automatically
+// when checkDisplayDependsOn or checkDisplayDependsOnAll is called
+```
+
+### Component Integration
+
+```typescript
+// Example UI component binding
+class FieldComponent implements IBindTargetInterface {
+  doc: RenovationDocument;
+  field: DocField;
+  
+  constructor(doc: RenovationDocument, field: DocField) {
+    this.doc = doc;
+    this.field = field;
+    
+    // Register with UI controller
+    core.ui.registerField(doc.doctype, field, this);
+  }
+  
+  refresh() {
+    // Update UI based on current state
+    this.updateVisibility();
+    this.updateReadOnly();
+    this.updateValue();
+  }
+  
+  updateVisibility() {
+    const visible = !this.field.hidden && 
+                   !this.field.hidden_due_to_dependency;
+    this.element.style.display = visible ? 'block' : 'none';
+  }
+  
+  updateReadOnly() {
+    const readOnly = this.field.read_only || 
+                     this.doc.docstatus > 0;
+    this.input.disabled = readOnly;
+  }
+  
+  updateValue() {
+    this.input.value = this.doc[this.field.fieldname] || '';
+  }
+}
+```

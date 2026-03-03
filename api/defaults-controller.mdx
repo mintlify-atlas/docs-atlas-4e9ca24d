@@ -1,0 +1,469 @@
+---
+title: 'DefaultsController'
+description: 'Complete API reference for default values and settings management in Renovation Core SDK'
+---
+
+## Overview
+
+The `DefaultsController` manages user-specific default values and settings as key-value pairs stored in the backend.
+
+## Getting Defaults
+
+### getDefault()
+
+Retrieves a default value for a given key.
+
+```typescript
+const response = await core.defaults.getDefault({
+  key: 'fiscal_year',
+  parent: '__default'
+});
+
+if (response.success) {
+  console.log('Fiscal year:', response.data);
+}
+```
+
+<ParamField path="getDefaultParams" type="GetDefaultParams" required>
+  Default retrieval parameters
+  <Expandable title="GetDefaultParams properties">
+    <ParamField path="key" type="string" required>
+      Key to lookup
+    </ParamField>
+    <ParamField path="parent" type="string">
+      Parent context. Default: '__default' (global)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="unknown">
+  The stored value (can be string, number, boolean, or object)
+</ResponseField>
+
+<Note>
+Returns empty success response if key doesn't exist. User must be logged in.
+</Note>
+
+## Setting Defaults
+
+### setDefault()
+
+Sets a default value for a specific key.
+
+```typescript
+const response = await core.defaults.setDefault({
+  key: 'default_currency',
+  value: 'USD',
+  parent: '__default'
+});
+```
+
+<ParamField path="setDefaultParams" type="SetDefaultParams" required>
+  Default setting parameters
+  <Expandable title="SetDefaultParams properties">
+    <ParamField path="key" type="string" required>
+      Key to set
+    </ParamField>
+    <ParamField path="value" type="string | number | boolean | object" required>
+      Value to store
+    </ParamField>
+    <ParamField path="parent" type="string">
+      Parent context. Default: '__default' (global)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="DefaultValueTypes">
+  The value that was set
+</ResponseField>
+
+<Note>
+Objects are automatically serialized to JSON before storage.
+</Note>
+
+## Special Settings
+
+### Renovation Custom Settings
+
+The controller handles special Renovation-specific settings with automatic key prefixing:
+
+- `disableSubmission`: Controls document submission behavior
+
+```typescript
+// Setting a Renovation custom setting
+await core.defaults.setDefault({
+  key: 'disableSubmission',
+  value: true
+});
+// Internally stored as: 'renovation:disableSubmission'
+
+// Getting a Renovation custom setting
+const response = await core.defaults.getDefault({
+  key: 'disableSubmission'
+});
+```
+
+## Cache Management
+
+### clearCache()
+
+Clears the defaults cache.
+
+```typescript
+core.defaults.clearCache();
+```
+
+<Note>
+Currently an empty method. Defaults are fetched fresh each time.
+</Note>
+
+## Code Examples
+
+### Basic Usage
+
+<CodeGroup>
+```typescript Store User Preferences
+// Set user preferences
+await core.defaults.setDefault({
+  key: 'theme',
+  value: 'dark'
+});
+
+await core.defaults.setDefault({
+  key: 'language',
+  value: 'en'
+});
+
+await core.defaults.setDefault({
+  key: 'items_per_page',
+  value: 50
+});
+
+// Retrieve preferences
+const theme = await core.defaults.getDefault({
+  key: 'theme'
+});
+
+if (theme.success && theme.data) {
+  applyTheme(theme.data);
+}
+```
+
+```typescript Store Complex Objects
+// Store configuration object
+const config = {
+  notifications: {
+    email: true,
+    push: true,
+    sms: false
+  },
+  display: {
+    theme: 'dark',
+    fontSize: 14
+  }
+};
+
+await core.defaults.setDefault({
+  key: 'user_config',
+  value: config
+});
+
+// Retrieve configuration
+const response = await core.defaults.getDefault({
+  key: 'user_config'
+});
+
+if (response.success && response.data) {
+  const userConfig = response.data;
+  console.log('Email notifications:', userConfig.notifications.email);
+}
+```
+
+```typescript Parent Context
+// Set defaults for specific context
+await core.defaults.setDefault({
+  key: 'default_warehouse',
+  value: 'WH-001',
+  parent: 'Sales Order'
+});
+
+await core.defaults.setDefault({
+  key: 'default_warehouse',
+  value: 'WH-002',
+  parent: 'Purchase Order'
+});
+
+// Get context-specific default
+const salesWarehouse = await core.defaults.getDefault({
+  key: 'default_warehouse',
+  parent: 'Sales Order'
+});
+// Returns: 'WH-001'
+
+const purchaseWarehouse = await core.defaults.getDefault({
+  key: 'default_warehouse',
+  parent: 'Purchase Order'
+});
+// Returns: 'WH-002'
+
+// Get global default
+const globalWarehouse = await core.defaults.getDefault({
+  key: 'default_warehouse',
+  parent: '__default'
+});
+```
+</CodeGroup>
+
+### Application Settings Manager
+
+```typescript
+class SettingsManager {
+  private static defaults = [
+    { key: 'theme', defaultValue: 'light' },
+    { key: 'language', defaultValue: 'en' },
+    { key: 'timezone', defaultValue: 'UTC' },
+    { key: 'date_format', defaultValue: 'YYYY-MM-DD' },
+    { key: 'items_per_page', defaultValue: 20 }
+  ];
+  
+  static async loadSettings() {
+    const settings = {};
+    
+    for (const setting of this.defaults) {
+      const response = await core.defaults.getDefault({
+        key: setting.key
+      });
+      
+      settings[setting.key] = response.success && response.data
+        ? response.data
+        : setting.defaultValue;
+    }
+    
+    return settings;
+  }
+  
+  static async saveSetting(key: string, value: any) {
+    return await core.defaults.setDefault({
+      key,
+      value
+    });
+  }
+  
+  static async resetToDefaults() {
+    for (const setting of this.defaults) {
+      await core.defaults.setDefault({
+        key: setting.key,
+        value: setting.defaultValue
+      });
+    }
+  }
+}
+
+// Usage
+const settings = await SettingsManager.loadSettings();
+console.log('User settings:', settings);
+
+// Update a setting
+await SettingsManager.saveSetting('theme', 'dark');
+
+// Reset all settings
+await SettingsManager.resetToDefaults();
+```
+
+### Form Default Values
+
+```typescript
+async function loadFormDefaults(doctype: string): Promise<any> {
+  const defaults = {};
+  
+  // Define default fields for doctype
+  const defaultFields = {
+    'Sales Invoice': [
+      'currency',
+      'price_list',
+      'company',
+      'cost_center'
+    ],
+    'Purchase Order': [
+      'currency',
+      'company',
+      'warehouse'
+    ]
+  };
+  
+  const fields = defaultFields[doctype] || [];
+  
+  for (const field of fields) {
+    const response = await core.defaults.getDefault({
+      key: `default_${field}`,
+      parent: doctype
+    });
+    
+    if (response.success && response.data) {
+      defaults[field] = response.data;
+    }
+  }
+  
+  return defaults;
+}
+
+// Usage
+async function createNewInvoice() {
+  // Create new document
+  const invoice = await core.model.newDoc({
+    doctype: 'Sales Invoice'
+  });
+  
+  // Load and apply defaults
+  const defaults = await loadFormDefaults('Sales Invoice');
+  Object.assign(invoice, defaults);
+  
+  console.log('New invoice with defaults:', invoice);
+  return invoice;
+}
+```
+
+### User Preferences Hook
+
+```typescript
+// User preferences management
+interface UserPreferences {
+  theme: 'light' | 'dark';
+  language: string;
+  timezone: string;
+  notifications: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  };
+  display: {
+    compact: boolean;
+    sidebar: boolean;
+    fontSize: number;
+  };
+}
+
+async function getUserPreferences(): Promise<UserPreferences> {
+  const response = await core.defaults.getDefault({
+    key: 'user_preferences'
+  });
+  
+  if (response.success && response.data) {
+    return response.data as UserPreferences;
+  }
+  
+  // Return defaults
+  return {
+    theme: 'light',
+    language: 'en',
+    timezone: 'UTC',
+    notifications: {
+      email: true,
+      push: true,
+      sms: false
+    },
+    display: {
+      compact: false,
+      sidebar: true,
+      fontSize: 14
+    }
+  };
+}
+
+async function saveUserPreferences(
+  preferences: UserPreferences
+): Promise<boolean> {
+  const response = await core.defaults.setDefault({
+    key: 'user_preferences',
+    value: preferences
+  });
+  
+  return response.success;
+}
+
+// Usage
+const prefs = await getUserPreferences();
+prefs.theme = 'dark';
+prefs.display.fontSize = 16;
+await saveUserPreferences(prefs);
+```
+
+### Session Persistence
+
+```typescript
+// Save and restore form state
+async function saveFormState(doctype: string, state: any) {
+  await core.defaults.setDefault({
+    key: 'form_state',
+    value: state,
+    parent: doctype
+  });
+}
+
+async function restoreFormState(doctype: string): Promise<any> {
+  const response = await core.defaults.getDefault({
+    key: 'form_state',
+    parent: doctype
+  });
+  
+  return response.success ? response.data : null;
+}
+
+// Usage in form
+async function handleFormExit(doctype: string, doc: any) {
+  // Save unsaved form state
+  if (doc.__unsaved) {
+    await saveFormState(doctype, {
+      data: doc,
+      timestamp: Date.now()
+    });
+  }
+}
+
+async function handleFormLoad(doctype: string): Promise<any> {
+  // Check for saved state
+  const savedState = await restoreFormState(doctype);
+  
+  if (savedState && savedState.timestamp) {
+    const age = Date.now() - savedState.timestamp;
+    
+    // Restore if less than 1 hour old
+    if (age < 3600000) {
+      console.log('Restoring saved form state');
+      return savedState.data;
+    }
+  }
+  
+  return null;
+}
+```
+
+### Feature Flags
+
+```typescript
+// Feature flag management using defaults
+async function isFeatureEnabled(feature: string): Promise<boolean> {
+  const response = await core.defaults.getDefault({
+    key: `feature_${feature}`
+  });
+  
+  return response.success && response.data === true;
+}
+
+async function setFeatureFlag(feature: string, enabled: boolean) {
+  await core.defaults.setDefault({
+    key: `feature_${feature}`,
+    value: enabled
+  });
+}
+
+// Usage
+if (await isFeatureEnabled('beta_dashboard')) {
+  loadBetaDashboard();
+} else {
+  loadStandardDashboard();
+}
+
+// Enable feature for user
+await setFeatureFlag('beta_dashboard', true);
+```

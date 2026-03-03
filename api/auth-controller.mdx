@@ -1,0 +1,767 @@
+---
+title: 'AuthController'
+description: 'Complete API reference for authentication methods in Renovation Core SDK'
+---
+
+## Overview
+
+The `AuthController` provides comprehensive authentication functionality including login, logout, session management, OTP-based authentication, password management, and social login integration.
+
+## Session Management
+
+### checkLogin()
+
+Checks the current session status and returns whether a user is logged in.
+
+```typescript
+await core.auth.checkLogin();
+```
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Session information including user details and authentication status
+  <Expandable title="SessionStatusInfo properties">
+    <ResponseField name="loggedIn" type="boolean">
+      Whether the user is currently logged in
+    </ResponseField>
+    <ResponseField name="user" type="string">
+      The username of the logged-in user
+    </ResponseField>
+    <ResponseField name="currentUser" type="string">
+      Alias for user field
+    </ResponseField>
+    <ResponseField name="token" type="string">
+      JWT token (if JWT is enabled)
+    </ResponseField>
+    <ResponseField name="lang" type="string">
+      User's preferred language
+    </ResponseField>
+    <ResponseField name="timestamp" type="number">
+      Unix timestamp of session creation
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Authentication
+
+### login()
+
+Authenticate a user with email and password.
+
+```typescript
+const response = await core.auth.login({
+  email: 'user@example.com',
+  password: 'securePassword123'
+});
+```
+
+<ParamField path="loginParams" type="LoginParams" required>
+  Login credentials
+  <Expandable title="LoginParams properties">
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      User's password
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="success" type="boolean">
+  Whether login was successful
+</ResponseField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Session information after successful login
+</ResponseField>
+
+### logout()
+
+Logs out the current user and clears the session.
+
+```typescript
+await core.auth.logout();
+```
+
+<ResponseField name="success" type="boolean">
+  Whether logout was successful
+</ResponseField>
+
+## Quick Login (PIN)
+
+### pinLogin()
+
+Authenticate using a quick login PIN.
+
+```typescript
+const response = await core.auth.pinLogin({
+  user: 'user@example.com',
+  pin: '1234'
+});
+```
+
+<ParamField path="pinLoginParams" type="PinLoginParams" required>
+  PIN login credentials
+  <Expandable title="PinLoginParams properties">
+    <ParamField path="user" type="string" required>
+      Username or email
+    </ParamField>
+    <ParamField path="pin" type="string" required>
+      Quick login PIN
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Session information after successful PIN login
+</ResponseField>
+
+<Note>
+PIN Login is different from OTP authentication. It's a pre-configured quick access PIN for the user.
+</Note>
+
+## OTP Authentication
+
+### sendOTP()
+
+Generates and sends a one-time password to the specified mobile number.
+
+```typescript
+const response = await core.auth.sendOTP({
+  mobile: '+1234567890',
+  newOTP: true,
+  hash: 'optional_hash'
+});
+```
+
+<ParamField path="sendOTPParams" type="SendOTPParams" required>
+  OTP generation parameters
+  <Expandable title="SendOTPParams properties">
+    <ParamField path="mobile" type="string" required>
+      Mobile number to send OTP to
+    </ParamField>
+    <ParamField path="newOTP" type="boolean">
+      If true, generates a fresh OTP instead of reusing a cached one. Default: false
+    </ParamField>
+    <ParamField path="hash" type="string">
+      Optional hash for additional security
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="SendOTPResponse">
+  OTP generation response
+  <Expandable title="SendOTPResponse properties">
+    <ResponseField name="status" type="'success'">
+      Status of OTP generation
+    </ResponseField>
+    <ResponseField name="mobile" type="string">
+      Mobile number where OTP was sent
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### verifyOTP()
+
+Verifies the OTP entered by the user and optionally starts a session.
+
+```typescript
+const response = await core.auth.verifyOTP({
+  mobile: '+1234567890',
+  OTP: '123456',
+  loginToUser: true
+});
+```
+
+<ParamField path="verifyOTPParams" type="VerifyOTPParams" required>
+  OTP verification parameters
+  <Expandable title="VerifyOTPParams properties">
+    <ParamField path="mobile" type="string" required>
+      Mobile number associated with the OTP
+    </ParamField>
+    <ParamField path="OTP" type="string" required>
+      The OTP received by the user
+    </ParamField>
+    <ParamField path="loginToUser" type="boolean" required>
+      Whether to start a session upon successful verification
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="VerifyOTPResponse">
+  OTP verification response
+  <Expandable title="VerifyOTPResponse properties">
+    <ResponseField name="status" type="'verified' | 'invalid_pin' | 'user_not_found' | 'no_linked_user' | 'no_pin_for_mobile'">
+      Status of OTP verification
+    </ResponseField>
+    <ResponseField name="mobile" type="string">
+      Mobile number verified
+    </ResponseField>
+    <ResponseField name="user" type="string">
+      Username (if loginToUser is true and verification succeeded)
+    </ResponseField>
+    <ResponseField name="token" type="string">
+      JWT token (if loginToUser is true and JWT is enabled)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Password Management
+
+### changePassword()
+
+Changes the password of the currently logged-in user.
+
+```typescript
+const response = await core.auth.changePassword({
+  old_password: 'currentPassword',
+  new_password: 'newSecurePassword123'
+});
+```
+
+<ParamField path="changePasswordParams" type="ChangePasswordParams" required>
+  Password change parameters
+  <Expandable title="ChangePasswordParams properties">
+    <ParamField path="old_password" type="string" required>
+      Current password for validation
+    </ParamField>
+    <ParamField path="new_password" type="string" required>
+      New password (must comply with password policy)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="boolean">
+  Returns true if password was changed successfully
+</ResponseField>
+
+<Warning>
+The new password must comply with the configured password policy (zxcvbn validation).
+</Warning>
+
+### getPasswordResetInfo()
+
+Retrieves available password reset methods and hints for a user.
+
+```typescript
+const response = await core.auth.getPasswordResetInfo({
+  type: 'email',
+  id: 'user@example.com'
+});
+```
+
+<ParamField path="passwordResetInfoParams" type="PasswordResetInfoParams" required>
+  Password reset info parameters
+  <Expandable title="PasswordResetInfoParams properties">
+    <ParamField path="type" type="'email' | 'mobile'" required>
+      Type of identifier
+    </ParamField>
+    <ParamField path="id" type="string" required>
+      The email or mobile number
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="ResetPasswordInfo">
+  Available reset methods
+  <Expandable title="ResetPasswordInfo properties">
+    <ResponseField name="has_medium" type="number">
+      Number of available reset mediums (0 or 1)
+    </ResponseField>
+    <ResponseField name="medium" type="string[]">
+      Available reset methods (e.g., ['email', 'sms'])
+    </ResponseField>
+    <ResponseField name="hints" type="ResetInfoHint">
+      Hints about the reset methods
+      <Expandable title="ResetInfoHint properties">
+        <ResponseField name="email" type="string">
+          Partially obscured email address
+        </ResponseField>
+        <ResponseField name="sms" type="string">
+          Partially obscured mobile number
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### generatePasswordResetOTP()
+
+Generates and sends an OTP for password reset.
+
+```typescript
+const response = await core.auth.generatePasswordResetOTP({
+  type: 'email',
+  id: 'user@example.com',
+  medium_type: 'email',
+  medium_id: 'user@example.com'
+});
+```
+
+<ParamField path="generateResetOTPParams" type="GenerateResetOTPParams" required>
+  OTP generation parameters
+  <Expandable title="GenerateResetOTPParams properties">
+    <ParamField path="type" type="'email' | 'mobile'" required>
+      Type of user identifier
+    </ParamField>
+    <ParamField path="id" type="string" required>
+      User's email or mobile
+    </ParamField>
+    <ParamField path="medium_type" type="'email' | 'sms'" required>
+      Medium to send OTP through
+    </ParamField>
+    <ParamField path="medium_id" type="string" required>
+      Destination email or mobile for OTP
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="GenerateResetOTPResponse">
+  Generation result
+  <Expandable title="GenerateResetOTPResponse properties">
+    <ResponseField name="sent" type="number">
+      1 if OTP was sent, 0 otherwise
+    </ResponseField>
+    <ResponseField name="reason" type="string">
+      Reason if OTP was not sent
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### verifyPasswordResetOTP()
+
+Verifies the OTP for password reset and returns a reset token.
+
+```typescript
+const response = await core.auth.verifyPasswordResetOTP({
+  type: 'email',
+  id: 'user@example.com',
+  medium_type: 'email',
+  medium_id: 'user@example.com',
+  otp: '123456'
+});
+```
+
+<ParamField path="verifyResetOTPParams" type="VerifyResetOTPParams" required>
+  OTP verification parameters
+  <Expandable title="VerifyResetOTPParams properties">
+    <ParamField path="type" type="'email' | 'mobile'" required>
+      Type of user identifier
+    </ParamField>
+    <ParamField path="id" type="string" required>
+      User's email or mobile
+    </ParamField>
+    <ParamField path="medium_type" type="'email' | 'sms'" required>
+      Medium OTP was sent through
+    </ParamField>
+    <ParamField path="medium_id" type="string" required>
+      Destination where OTP was received
+    </ParamField>
+    <ParamField path="otp" type="string" required>
+      The OTP received
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="VerifyResetOTPResponse">
+  Verification result
+  <Expandable title="VerifyResetOTPResponse properties">
+    <ResponseField name="verified" type="number">
+      1 if OTP was verified, 0 otherwise
+    </ResponseField>
+    <ResponseField name="reset_token" type="string">
+      Token to use for password reset (only if verified)
+    </ResponseField>
+    <ResponseField name="reason" type="string">
+      Reason if OTP was not verified
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### updatePasswordWithToken()
+
+Updates the user's password using a reset token.
+
+```typescript
+const response = await core.auth.updatePasswordWithToken({
+  reset_token: 'token_from_verification',
+  new_password: 'newSecurePassword123'
+});
+```
+
+<ParamField path="updatePasswordParams" type="UpdatePasswordParams" required>
+  Password update parameters
+  <Expandable title="UpdatePasswordParams properties">
+    <ParamField path="reset_token" type="string" required>
+      Token obtained from verifyPasswordResetOTP
+    </ParamField>
+    <ParamField path="new_password" type="string" required>
+      New password for the user
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="UpdatePasswordResponse">
+  Update result
+  <Expandable title="UpdatePasswordResponse properties">
+    <ResponseField name="updated" type="number">
+      1 if password was updated, 0 otherwise
+    </ResponseField>
+    <ResponseField name="reason" type="string">
+      Reason if password was not updated
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### estimatePassword()
+
+Estimates password strength using the zxcvbn algorithm.
+
+```typescript
+const result = core.auth.estimatePassword({
+  password: 'myPassword123',
+  user_inputs: {
+    email: 'user@example.com',
+    firstName: 'John',
+    lastName: 'Doe'
+  }
+});
+```
+
+<ParamField path="estimatePasswordParams" type="EstimatePasswordParams" required>
+  Password estimation parameters
+  <Expandable title="EstimatePasswordParams properties">
+    <ParamField path="password" type="string" required>
+      Password to estimate
+    </ParamField>
+    <ParamField path="user_inputs" type="object">
+      Additional context for better estimation
+      <Expandable title="user_inputs properties">
+        <ParamField path="email" type="string">
+          User's email
+        </ParamField>
+        <ParamField path="firstName" type="string">
+          User's first name
+        </ParamField>
+        <ParamField path="lastName" type="string">
+          User's last name
+        </ParamField>
+        <ParamField path="middleName" type="string">
+          User's middle name
+        </ParamField>
+        <ParamField path="dateOfBirth" type="string">
+          User's date of birth
+        </ParamField>
+        <ParamField path="otherInputs" type="string[]">
+          Other relevant inputs
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="score" type="0 | 1 | 2 | 3 | 4">
+  Password strength score:
+  - 0: Too guessable (risky password, guesses < 10³)
+  - 1: Very guessable (guesses < 10⁶)
+  - 2: Somewhat guessable (guesses < 10⁸)
+  - 3: Safely unguessable (guesses < 10¹⁰)
+  - 4: Very unguessable (guesses ≥ 10¹⁰)
+</ResponseField>
+
+<ResponseField name="feedback" type="object">
+  Verbal feedback to help choose better passwords (set when score ≤ 2)
+</ResponseField>
+
+<ResponseField name="calcTime" type="number">
+  Time taken to calculate in milliseconds
+</ResponseField>
+
+## Social Login
+
+### loginViaGoogle()
+
+Authenticates using Google OAuth.
+
+```typescript
+const response = await core.auth.loginViaGoogle({
+  code: 'google_auth_code',
+  state: 'optional_state_param'
+});
+```
+
+<ParamField path="loginViaGoogleParams" type="LoginViaGoogleParams" required>
+  Google login parameters
+  <Expandable title="LoginViaGoogleParams properties">
+    <ParamField path="code" type="string" required>
+      Google OAuth authorization code
+    </ParamField>
+    <ParamField path="state" type="string">
+      Optional state parameter (JWT or base64 encoded data)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Session information after successful Google login
+</ResponseField>
+
+### loginViaApple()
+
+Authenticates using Apple Sign In.
+
+```typescript
+const response = await core.auth.loginViaApple({
+  code: 'apple_auth_code',
+  option: 'native',
+  state: 'optional_state_param'
+});
+```
+
+<ParamField path="loginViaAppleParams" type="LoginViaAppleParams" required>
+  Apple login parameters
+  <Expandable title="LoginViaAppleParams properties">
+    <ParamField path="code" type="string" required>
+      Apple OAuth authorization code
+    </ParamField>
+    <ParamField path="option" type="'native' | 'android' | 'web'" required>
+      Platform option for Apple Sign In
+    </ParamField>
+    <ParamField path="state" type="string">
+      Optional state parameter (JWT or base64 encoded data)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Session information after successful Apple login
+</ResponseField>
+
+## User Management
+
+### getCurrentUser()
+
+Returns the name of the currently logged-in user.
+
+```typescript
+const username = core.auth.getCurrentUser();
+// Returns: 'user@example.com' or null
+```
+
+<ResponseField name="return" type="string | null">
+  Username of current user or null if not logged in
+</ResponseField>
+
+### getCurrentToken()
+
+Returns the current JWT token if JWT authentication is enabled.
+
+```typescript
+const token = core.auth.getCurrentToken();
+// Returns: 'Token eyJ0eXAi...' or null
+```
+
+<ResponseField name="return" type="string | null">
+  JWT token prefixed with 'Token ' or null if not available
+</ResponseField>
+
+### getCurrentUserRoles()
+
+Returns the roles assigned to the currently logged-in user.
+
+```typescript
+const response = await core.auth.getCurrentUserRoles();
+// Returns roles like: ['System Manager', 'Sales User']
+```
+
+<ResponseField name="data" type="string[]">
+  Array of role names assigned to the user
+</ResponseField>
+
+### setUserLanguage()
+
+Sets the user's preferred language in the backend.
+
+```typescript
+const success = await core.auth.setUserLanguage('ar');
+```
+
+<ParamField path="lang" type="string" required>
+  Language code (e.g., 'en', 'ar', 'es')
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if language was set successfully
+</ResponseField>
+
+<Warning>
+User must be logged in to set language. Throws error if not authenticated.
+</Warning>
+
+## Session Control
+
+### setExternalSession()
+
+Sets a session obtained externally and verifies it with the backend.
+
+```typescript
+const response = await core.auth.setExternalSession({
+  user: 'user@example.com',
+  token: 'external_jwt_token',
+  loggedIn: true
+});
+```
+
+<ParamField path="sessionStatusInfo" type="SessionStatusInfo" required>
+  External session information to set
+</ParamField>
+
+<ResponseField name="data" type="SessionStatusInfo">
+  Verified session information
+</ResponseField>
+
+### setSessionStatusInfo()
+
+Sets session status information (useful in server environments).
+
+```typescript
+await core.auth.setSessionStatusInfo({
+  sessionStatusInfo: {
+    user: 'user@example.com',
+    loggedIn: true,
+    // ... other session fields
+  }
+});
+```
+
+<ParamField path="sessionStatusInfo" type="SessionStatusInfo" required>
+  Session information to set
+</ParamField>
+
+## JWT Configuration
+
+### enableJwt
+
+Getter/setter for enabling JWT authentication.
+
+```typescript
+// Enable JWT
+core.auth.enableJwt = true;
+
+// Check if JWT is enabled
+if (core.auth.enableJwt) {
+  console.log('JWT is enabled');
+}
+```
+
+<Note>
+Enabling JWT requires the `renovation_core` app to be installed on the Frappe backend.
+</Note>
+
+## Code Examples
+
+### Complete Login Flow
+
+<CodeGroup>
+```typescript Email/Password Login
+const loginResponse = await core.auth.login({
+  email: 'user@example.com',
+  password: 'securePassword'
+});
+
+if (loginResponse.success) {
+  console.log('Logged in as:', core.auth.getCurrentUser());
+  
+  // Get user roles
+  const rolesResponse = await core.auth.getCurrentUserRoles();
+  console.log('User roles:', rolesResponse.data);
+}
+```
+
+```typescript OTP Login
+// Step 1: Send OTP
+const sendResponse = await core.auth.sendOTP({
+  mobile: '+1234567890',
+  newOTP: true
+});
+
+if (sendResponse.success) {
+  console.log('OTP sent to:', sendResponse.data.mobile);
+  
+  // Step 2: Verify OTP and login
+  const verifyResponse = await core.auth.verifyOTP({
+    mobile: '+1234567890',
+    OTP: '123456', // User-entered OTP
+    loginToUser: true
+  });
+  
+  if (verifyResponse.success && verifyResponse.data.status === 'verified') {
+    console.log('Logged in successfully');
+  }
+}
+```
+
+```typescript Password Reset Flow
+// Step 1: Get reset info
+const infoResponse = await core.auth.getPasswordResetInfo({
+  type: 'email',
+  id: 'user@example.com'
+});
+
+console.log('Available methods:', infoResponse.data.medium);
+
+// Step 2: Generate OTP
+const generateResponse = await core.auth.generatePasswordResetOTP({
+  type: 'email',
+  id: 'user@example.com',
+  medium_type: 'email',
+  medium_id: 'user@example.com'
+});
+
+if (generateResponse.data.sent) {
+  // Step 3: Verify OTP
+  const verifyResponse = await core.auth.verifyPasswordResetOTP({
+    type: 'email',
+    id: 'user@example.com',
+    medium_type: 'email',
+    medium_id: 'user@example.com',
+    otp: '123456' // User-entered OTP
+  });
+  
+  if (verifyResponse.data.verified) {
+    // Step 4: Update password
+    const updateResponse = await core.auth.updatePasswordWithToken({
+      reset_token: verifyResponse.data.reset_token,
+      new_password: 'newSecurePassword123'
+    });
+    
+    if (updateResponse.data.updated) {
+      console.log('Password updated successfully');
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Password Strength Check
+
+```typescript
+const result = core.auth.estimatePassword({
+  password: 'P@ssw0rd123',
+  user_inputs: {
+    email: 'john@example.com',
+    firstName: 'John',
+    lastName: 'Doe'
+  }
+});
+
+if (result.score < 3) {
+  console.log('Weak password!');
+  console.log('Suggestions:', result.feedback);
+} else {
+  console.log('Strong password!');
+}
+```

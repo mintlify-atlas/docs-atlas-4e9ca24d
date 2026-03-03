@@ -1,0 +1,539 @@
+---
+title: Real-time Features
+description: Guide to Socket.IO integration and real-time event handling with MessageBus
+---
+
+The Renovation Core SDK provides real-time capabilities through Socket.IO integration and a MessageBus system for in-app communication.
+
+## Socket.IO Integration
+
+### Connecting to Socket.IO
+
+Establish a real-time connection to your Frappe backend:
+
+```typescript Connect to Socket.IO
+import { Renovation } from 'renovation-core';
+
+const core = new Renovation();
+core.init({ hostUrl: 'https://your-frappe-site.com' });
+
+// Connect to Socket.IO
+core.socketio.connect({
+  url: 'https://your-frappe-site.com',  // Optional: defaults to hostUrl
+  path: '/socket.io',  // Optional: socket.io endpoint path
+  reconnectionAttempts: 5,  // Optional: default 5
+  reconnectionDelay: 5000   // Optional: default 5000ms
+});
+```
+
+<Note>
+The SDK automatically handles authentication headers and cookies for Socket.IO connections.
+</Note>
+
+### Check Connection Status
+
+Monitor the connection state:
+
+```typescript Connection Status
+if (core.socketio.isConnected) {
+  console.log('Socket.IO is connected');
+} else {
+  console.log('Socket.IO is not connected');
+}
+
+// Get socket reference
+const socket = core.socketio.getSocket();
+```
+
+### Subscribe to Events
+
+Listen for real-time events from the server:
+
+<CodeGroup>
+```typescript Document Updates
+// Listen for document updates
+core.socketio.on({
+  event: 'doc_update',
+  callback: (data) => {
+    console.log('Document updated:', data.doctype, data.docname);
+    console.log('Updated data:', data);
+    
+    // Refresh local cache if needed
+    if (data.doctype === 'Customer') {
+      core.model.getDoc({
+        doctype: data.doctype,
+        docname: data.docname,
+        forceFetch: true
+      });
+    }
+  }
+});
+```
+
+```typescript List Updates
+// Listen for list view updates
+core.socketio.on({
+  event: 'list_update',
+  callback: (data) => {
+    console.log('List updated for doctype:', data.doctype);
+    // Refresh list query
+  }
+});
+```
+
+```typescript Custom Events
+// Listen for custom server events
+core.socketio.on({
+  event: 'custom_notification',
+  callback: (data) => {
+    console.log('Notification received:', data.message);
+    console.log('From:', data.from_user);
+  }
+});
+```
+</CodeGroup>
+
+### Emit Events
+
+Send events to the server:
+
+```typescript Emit Events
+// Emit a custom event
+core.socketio.emit({
+  event: 'custom_action',
+  data: {
+    action: 'refresh_dashboard',
+    user: core.auth.getCurrentUser()
+  }
+});
+
+// Emit with multiple data arguments
+core.socketio.emit({
+  event: 'join_room',
+  data: ['room_name', { user: 'user@example.com' }]
+});
+```
+
+### Unsubscribe from Events
+
+Remove event listeners:
+
+```typescript Unsubscribe
+const handleUpdate = (data) => {
+  console.log('Update received:', data);
+};
+
+// Subscribe
+core.socketio.on({
+  event: 'doc_update',
+  callback: handleUpdate
+});
+
+// Unsubscribe
+core.socketio.off({
+  event: 'doc_update',
+  callback: handleUpdate
+});
+```
+
+### Disconnect
+
+Close the Socket.IO connection:
+
+```typescript Disconnect
+core.socketio.disconnect();
+console.log('Socket.IO disconnected');
+```
+
+## Common Socket.IO Events
+
+Frappe emits several standard events:
+
+### Document Events
+
+<Tabs>
+  <Tab title="doc_update">
+    Emitted when a document is updated:
+    ```typescript
+    core.socketio.on({
+      event: 'doc_update',
+      callback: (data) => {
+        // data.doctype: The doctype name
+        // data.docname: The document name
+        // data.data: Updated fields
+      }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="doc_viewers">
+    Emitted when users are viewing a document:
+    ```typescript
+    core.socketio.on({
+      event: 'doc_viewers',
+      callback: (data) => {
+        // data.doctype: The doctype name
+        // data.docname: The document name
+        // data.users: Array of users viewing
+      }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="doc_open">
+    Notify server that a document is opened:
+    ```typescript
+    core.socketio.emit({
+      event: 'doc_open',
+      data: ['Customer', 'CUST-00001']
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Notification Events
+
+```typescript Notifications
+// Listen for notifications
+core.socketio.on({
+  event: 'notification',
+  callback: (notification) => {
+    console.log('Title:', notification.title);
+    console.log('Message:', notification.message);
+    console.log('Type:', notification.type);  // 'alert', 'info', etc.
+  }
+});
+```
+
+## MessageBus
+
+The MessageBus provides in-app event communication without Socket.IO.
+
+### Post Messages
+
+Send messages to a bus:
+
+```typescript Post to MessageBus
+import { MessageBus } from 'renovation-core';
+
+const messageBus = new MessageBus();
+
+// Post a message
+messageBus.post({
+  id: 'document-updates',
+  data: {
+    doctype: 'Customer',
+    docname: 'CUST-00001',
+    action: 'updated'
+  }
+});
+```
+
+### Subscribe to Messages
+
+Listen for messages on a bus:
+
+```typescript Subscribe to MessageBus
+const subject = messageBus.getSubject({ id: 'document-updates' });
+
+subject.subscribe((data) => {
+  console.log('Message received:', data);
+  console.log('Doctype:', data.doctype);
+  console.log('Action:', data.action);
+  
+  // Handle the message
+  if (data.action === 'updated') {
+    // Refresh UI or data
+  }
+});
+```
+
+### Multiple Subscribers
+
+Multiple components can subscribe to the same bus:
+
+```typescript Multiple Subscribers
+// Component A
+const subject1 = messageBus.getSubject({ id: 'cart-updates' });
+subject1.subscribe((data) => {
+  console.log('Component A received:', data);
+});
+
+// Component B
+const subject2 = messageBus.getSubject({ id: 'cart-updates' });
+subject2.subscribe((data) => {
+  console.log('Component B received:', data);
+});
+
+// Post to both subscribers
+messageBus.post({
+  id: 'cart-updates',
+  data: { items: 5, total: 150.00 }
+});
+```
+
+## Practical Examples
+
+### Real-time Dashboard
+
+Build a dashboard that updates in real-time:
+
+```typescript Real-time Dashboard
+class Dashboard {
+  private core: Renovation;
+  private messageBus: MessageBus;
+  
+  constructor(core: Renovation) {
+    this.core = core;
+    this.messageBus = new MessageBus();
+    this.setupRealtimeUpdates();
+  }
+  
+  private setupRealtimeUpdates() {
+    // Connect to Socket.IO
+    this.core.socketio.connect();
+    
+    // Listen for sales order updates
+    this.core.socketio.on({
+      event: 'doc_update',
+      callback: (data) => {
+        if (data.doctype === 'Sales Order') {
+          this.messageBus.post({
+            id: 'dashboard-refresh',
+            data: { type: 'sales_order', data }
+          });
+        }
+      }
+    });
+    
+    // Listen for custom business events
+    this.core.socketio.on({
+      event: 'low_stock_alert',
+      callback: (data) => {
+        this.showNotification('Low Stock', data.item_name);
+      }
+    });
+  }
+  
+  private showNotification(title: string, message: string) {
+    console.log(`[${title}] ${message}`);
+  }
+}
+```
+
+### Collaborative Editing
+
+Show who's viewing a document:
+
+```typescript Document Viewers
+class DocumentEditor {
+  private viewers: string[] = [];
+  
+  constructor(private core: Renovation, doctype: string, docname: string) {
+    this.setupCollaboration(doctype, docname);
+  }
+  
+  private setupCollaboration(doctype: string, docname: string) {
+    // Notify server that we're viewing
+    this.core.socketio.emit({
+      event: 'doc_open',
+      data: [doctype, docname]
+    });
+    
+    // Listen for other viewers
+    this.core.socketio.on({
+      event: 'doc_viewers',
+      callback: (data) => {
+        if (data.doctype === doctype && data.docname === docname) {
+          this.viewers = data.users;
+          this.updateViewersUI();
+        }
+      }
+    });
+    
+    // Listen for field changes
+    this.core.socketio.on({
+      event: 'doc_update',
+      callback: (data) => {
+        if (data.doctype === doctype && data.docname === docname) {
+          this.updateDocument(data.data);
+        }
+      }
+    });
+  }
+  
+  private updateViewersUI() {
+    console.log('Current viewers:', this.viewers);
+    // Update UI to show viewers
+  }
+  
+  private updateDocument(updates: any) {
+    console.log('Document updated by another user:', updates);
+    // Merge changes into local document
+  }
+}
+```
+
+### Cart Synchronization
+
+Sync shopping cart across tabs using MessageBus:
+
+```typescript Cart Sync
+class Cart {
+  private messageBus: MessageBus;
+  private items: any[] = [];
+  
+  constructor() {
+    this.messageBus = new MessageBus();
+    this.setupSync();
+  }
+  
+  private setupSync() {
+    const subject = this.messageBus.getSubject({ id: 'cart-sync' });
+    
+    subject.subscribe((data: any) => {
+      if (data.action === 'add') {
+        this.items.push(data.item);
+      } else if (data.action === 'remove') {
+        this.items = this.items.filter(i => i.id !== data.itemId);
+      } else if (data.action === 'clear') {
+        this.items = [];
+      }
+      this.updateUI();
+    });
+  }
+  
+  addItem(item: any) {
+    this.messageBus.post({
+      id: 'cart-sync',
+      data: { action: 'add', item }
+    });
+  }
+  
+  removeItem(itemId: string) {
+    this.messageBus.post({
+      id: 'cart-sync',
+      data: { action: 'remove', itemId }
+    });
+  }
+  
+  clear() {
+    this.messageBus.post({
+      id: 'cart-sync',
+      data: { action: 'clear' }
+    });
+  }
+  
+  private updateUI() {
+    console.log('Cart items:', this.items.length);
+    // Update UI
+  }
+}
+```
+
+### Progress Tracking
+
+Track long-running operations:
+
+```typescript Progress Tracking
+class JobTracker {
+  private messageBus: MessageBus;
+  
+  constructor() {
+    this.messageBus = new MessageBus();
+  }
+  
+  startJob(jobId: string) {
+    const subject = this.messageBus.getSubject({ id: `job-${jobId}` });
+    
+    subject.subscribe((progress: any) => {
+      console.log(`Job ${jobId}: ${progress.percent}%`);
+      console.log(`Status: ${progress.message}`);
+      
+      if (progress.percent === 100) {
+        console.log('Job completed!');
+      }
+    });
+  }
+  
+  updateProgress(jobId: string, percent: number, message: string) {
+    this.messageBus.post({
+      id: `job-${jobId}`,
+      data: { percent, message }
+    });
+  }
+}
+
+// Usage
+const tracker = new JobTracker();
+tracker.startJob('import-001');
+
+// Simulate progress updates
+tracker.updateProgress('import-001', 25, 'Parsing file...');
+tracker.updateProgress('import-001', 50, 'Validating data...');
+tracker.updateProgress('import-001', 75, 'Importing records...');
+tracker.updateProgress('import-001', 100, 'Complete!');
+```
+
+## Best Practices
+
+1. **Connection management**: Connect Socket.IO after successful authentication.
+
+2. **Error handling**: Handle connection failures gracefully with reconnection logic.
+
+3. **Event naming**: Use consistent, descriptive event names.
+
+4. **Cleanup**: Unsubscribe from events and disconnect when not needed.
+
+5. **MessageBus vs Socket.IO**: Use MessageBus for in-app communication, Socket.IO for server events.
+
+6. **Performance**: Avoid subscribing to too many events unnecessarily.
+
+7. **Security**: Never expose sensitive data in Socket.IO events.
+
+## Troubleshooting
+
+<Tabs>
+  <Tab title="Connection Failed">
+    ```typescript
+    // Check if socket is connected
+    if (!core.socketio.isConnected) {
+      console.error('Socket.IO connection failed');
+      
+      // Check authentication
+      const session = await core.auth.checkLogin();
+      if (!session.success) {
+        console.error('User not authenticated');
+      }
+      
+      // Try reconnecting
+      core.socketio.connect();
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Events Not Received">
+    ```typescript
+    // Verify event subscription
+    const socket = core.socketio.getSocket();
+    
+    socket.on('connect', () => {
+      console.log('Socket connected');
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+    
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Related Resources
+
+- [API Overview](/api/overview)
+- [Request and Response](/api/request)
+- [File Upload](/guides/storage)

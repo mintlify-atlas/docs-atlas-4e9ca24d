@@ -1,0 +1,491 @@
+---
+title: 'PermissionController'
+description: 'Complete API reference for permission management in Renovation Core SDK'
+---
+
+## Overview
+
+The `PermissionController` manages document and doctype permissions, checking user access rights for various operations.
+
+## Permission Checking
+
+### hasPerm()
+
+Checks if the user has a specific permission for a doctype.
+
+```typescript
+const hasRead = await core.perm.hasPerm({
+  doctype: 'Sales Invoice',
+  ptype: 'read',
+  permLevel: 0,
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="hasPermParams" type="HasPermParams" required>
+  Permission check parameters
+  <Expandable title="HasPermParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="ptype" type="PermissionType" required>
+      Permission type: 'read' | 'write' | 'create' | 'delete' | 'submit' | 'cancel' | 'amend'
+    </ParamField>
+    <ParamField path="permLevel" type="number">
+      Permission level. Default: 0
+    </ParamField>
+    <ParamField path="docname" type="string">
+      Specific document name for document-level permissions
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user has the permission, false otherwise
+</ResponseField>
+
+### hasPerms()
+
+Checks if the user has multiple permissions for a doctype.
+
+```typescript
+const hasAll = await core.perm.hasPerms({
+  doctype: 'Sales Invoice',
+  ptypes: ['read', 'write', 'submit'],
+  docname: 'SI-001'
+});
+```
+
+<ParamField path="hasPermsParams" type="HasPermsParams" required>
+  Multiple permission check parameters
+  <Expandable title="HasPermsParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="ptypes" type="PermissionType[]" required>
+      Array of permission types to check
+    </ParamField>
+    <ParamField path="docname" type="string">
+      Specific document name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user has ALL specified permissions, false otherwise
+</ResponseField>
+
+### getPerm()
+
+Builds and returns permission object for a doctype.
+
+```typescript
+const response = await core.perm.getPerm({
+  doctype: 'Sales Invoice',
+  doc: document
+});
+```
+
+<ParamField path="getPermParams" type="GetPermParams" required>
+  Permission retrieval parameters
+  <Expandable title="GetPermParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+    <ParamField path="doc" type="RenovationDocument">
+      Optional document for document-specific rules
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="Array<Partial<Permission>>">
+  Permissions array indexed by permission level
+  <Expandable title="Permission properties">
+    <ResponseField name="read" type="boolean">
+      Read permission
+    </ResponseField>
+    <ResponseField name="write" type="boolean">
+      Write permission
+    </ResponseField>
+    <ResponseField name="create" type="boolean">
+      Create permission
+    </ResponseField>
+    <ResponseField name="delete" type="boolean">
+      Delete permission
+    </ResponseField>
+    <ResponseField name="submit" type="boolean">
+      Submit permission
+    </ResponseField>
+    <ResponseField name="cancel" type="boolean">
+      Cancel permission
+    </ResponseField>
+    <ResponseField name="amend" type="boolean">
+      Amend permission
+    </ResponseField>
+    <ResponseField name="permLevel" type="number">
+      Permission level
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Permission Checks
+
+### canCreate()
+
+Checks if user can create documents of a doctype.
+
+```typescript
+const canCreate = await core.perm.canCreate({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canCreateParams" type="CanCreateParams" required>
+  <Expandable title="CanCreateParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can create
+</ResponseField>
+
+### canRead()
+
+Checks if user can read documents of a doctype.
+
+```typescript
+const canRead = await core.perm.canRead({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canReadParams" type="CanReadParams" required>
+  <Expandable title="CanReadParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can read
+</ResponseField>
+
+### canWrite()
+
+Checks if user can write/edit documents.
+
+```typescript
+const canWrite = await core.perm.canWrite({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canWriteParams" type="CanWriteParams" required>
+  <Expandable title="CanWriteParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can write
+</ResponseField>
+
+### canDelete()
+
+Checks if user can delete documents.
+
+```typescript
+const canDelete = await core.perm.canDelete({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canDeleteParams" type="CanDeleteParams" required>
+  <Expandable title="CanDeleteParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can delete
+</ResponseField>
+
+### canSubmit()
+
+Checks if user can submit documents.
+
+```typescript
+const canSubmit = await core.perm.canSubmit({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canSubmitParams" type="CanSubmitParams" required>
+  <Expandable title="CanSubmitParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can submit
+</ResponseField>
+
+<Note>
+Requires permission cache to be loaded.
+</Note>
+
+### canCancel()
+
+Checks if user can cancel submitted documents.
+
+```typescript
+const canCancel = await core.perm.canCancel({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canCancelParams" type="CanCancelParams" required>
+  <Expandable title="CanCancelParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can cancel
+</ResponseField>
+
+### canAmend()
+
+Checks if user can amend cancelled documents.
+
+```typescript
+const canAmend = await core.perm.canAmend({
+  doctype: 'Sales Invoice'
+});
+```
+
+<ParamField path="canAmendParams" type="CanAmendParams" required>
+  <Expandable title="CanAmendParams properties">
+    <ParamField path="doctype" type="string" required>
+      Target doctype
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if user can amend
+</ResponseField>
+
+## Additional Permissions
+
+### canImport()
+
+Checks if user can import data.
+
+```typescript
+const canImport = await core.perm.canImport({
+  doctype: 'Item'
+});
+```
+
+### canExport()
+
+Checks if user can export data.
+
+```typescript
+const canExport = await core.perm.canExport({
+  doctype: 'Item'
+});
+```
+
+### canPrint()
+
+Checks if user can print documents.
+
+```typescript
+const canPrint = await core.perm.canPrint({
+  doctype: 'Sales Invoice'
+});
+```
+
+### canEmail()
+
+Checks if user can email documents.
+
+```typescript
+const canEmail = await core.perm.canEmail({
+  doctype: 'Sales Invoice'
+});
+```
+
+### canSearch()
+
+Checks if user can search documents.
+
+```typescript
+const canSearch = await core.perm.canSearch({
+  doctype: 'Sales Invoice'
+});
+```
+
+### canGetReport()
+
+Checks if user can access reports.
+
+```typescript
+const canReport = await core.perm.canGetReport({
+  doctype: 'Sales Invoice'
+});
+```
+
+### canSetUserPermissions()
+
+Checks if user can set user permissions.
+
+```typescript
+const canSetPerms = await core.perm.canSetUserPermissions({
+  doctype: 'Sales Invoice'
+});
+```
+
+### canRecursiveDelete()
+
+Checks if user can recursively delete documents.
+
+```typescript
+const canRecDelete = await core.perm.canRecursiveDelete({
+  doctype: 'Sales Invoice'
+});
+```
+
+## Permission Loading
+
+### loadBasicPerms()
+
+Loads basic permissions from backend for current user.
+
+```typescript
+const response = await core.perm.loadBasicPerms();
+```
+
+<ResponseField name="success" type="boolean">
+  Whether permissions were loaded successfully
+</ResponseField>
+
+<Note>
+This is called automatically when needed. Manual calls are rarely required.
+</Note>
+
+## Cache Management
+
+### clearCache()
+
+Clears permission cache.
+
+```typescript
+core.perm.clearCache();
+```
+
+## Code Examples
+
+### Permission-Based UI
+
+<CodeGroup>
+```typescript Check Before Action
+// Check if user can create
+const canCreate = await core.perm.canCreate({
+  doctype: 'Sales Invoice'
+});
+
+if (canCreate) {
+  // Show create button
+  const doc = await core.model.newDoc({
+    doctype: 'Sales Invoice'
+  });
+}
+
+// Check multiple permissions
+const hasFullAccess = await core.perm.hasPerms({
+  doctype: 'Sales Invoice',
+  ptypes: ['read', 'write', 'submit', 'cancel']
+});
+
+if (hasFullAccess) {
+  console.log('User has full access');
+}
+```
+
+```typescript Document-Level Permissions
+// Check specific document permissions
+const canEdit = await core.perm.hasPerm({
+  doctype: 'Sales Invoice',
+  ptype: 'write',
+  docname: 'SI-001'
+});
+
+if (canEdit) {
+  // Allow editing
+} else {
+  // Show read-only view
+}
+```
+
+```typescript Conditional Feature Access
+// Check various permissions
+const permissions = {
+  canCreate: await core.perm.canCreate({ doctype: 'Item' }),
+  canImport: await core.perm.canImport({ doctype: 'Item' }),
+  canExport: await core.perm.canExport({ doctype: 'Item' }),
+  canDelete: await core.perm.canDelete({ doctype: 'Item' })
+};
+
+// Enable/disable UI features
+if (permissions.canImport) {
+  showImportButton();
+}
+
+if (permissions.canExport) {
+  showExportButton();
+}
+```
+</CodeGroup>
+
+### Permission Validation
+
+```typescript
+async function validateDocumentAccess(
+  doctype: string,
+  action: 'read' | 'write' | 'delete'
+): Promise<void> {
+  const perm = await core.perm.hasPerm({
+    doctype,
+    ptype: action
+  });
+  
+  if (!perm) {
+    throw new Error(
+      `You don't have ${action} permission for ${doctype}`
+    );
+  }
+}
+
+// Usage
+try {
+  await validateDocumentAccess('Sales Invoice', 'write');
+  // Proceed with write operation
+} catch (error) {
+  console.error(error.message);
+}
+```

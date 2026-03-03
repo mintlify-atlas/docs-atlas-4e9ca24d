@@ -1,0 +1,611 @@
+---
+title: "Error Handling"
+description: "Handle errors and responses from Renovation Core SDK"
+---
+
+## Overview
+
+Renovation Core SDK uses a structured approach to error handling through the `RequestResponse` pattern and `RenovationError` enum. This provides consistent error handling across all SDK operations.
+
+## RequestResponse Pattern
+
+All SDK methods that communicate with the backend return a `RequestResponse<T>` object:
+
+```typescript
+const response = await renovation.auth.login("user@example.com", "password");
+
+if (response.success) {
+  // Operation succeeded
+  console.log("User:", response.data);
+} else {
+  // Operation failed
+  console.error("Error:", response.error);
+  console.error("HTTP Code:", response.httpCode);
+}
+```
+
+### RequestResponse Properties
+
+<ParamField path="success" type="boolean">
+  Indicates whether the request was successful.
+  
+  - `true` - Request succeeded (HTTP 2xx)
+  - `false` - Request failed
+</ParamField>
+
+<ParamField path="httpCode" type="number">
+  The HTTP status code from the server response.
+  
+  Common codes:
+  - `200` - Success
+  - `400` - Bad Request
+  - `401` - Unauthorized
+  - `403` - Forbidden
+  - `404` - Not Found
+  - `500` - Internal Server Error
+</ParamField>
+
+<ParamField path="data" type="T">
+  The response data when successful, or error data when failed.
+  
+  Type `T` is determined by the specific SDK method being called.
+</ParamField>
+
+<ParamField path="exc" type="RenovationError">
+  Optional. The type of error that occurred (if applicable).
+  
+  See [RenovationError Types](#renovation-error-types) below.
+</ParamField>
+
+<ParamField path="error" type="ErrorDetail">
+  Optional. Detailed error information including messages, causes, and suggestions.
+  
+  See [ErrorDetail Interface](#errordetail-interface) below.
+</ParamField>
+
+## RenovationError Types
+
+The SDK defines several error types in the `RenovationError` enum:
+
+```typescript
+enum RenovationError {
+  AuthenticationError,
+  PermissionError,
+  NotFoundError,
+  NetworkError,
+  GenericError,
+  DataFormatError,
+  DuplicateEntryError
+}
+```
+
+### Error Type Descriptions
+
+| Error Type | Description | Common Causes |
+|------------|-------------|---------------|
+| `AuthenticationError` | Authentication failed or session expired | Invalid credentials, expired session, missing token |
+| `PermissionError` | User lacks required permissions | Insufficient role permissions, document-level restrictions |
+| `NotFoundError` | Requested resource not found | Invalid document name, deleted record |
+| `NetworkError` | Network connectivity issues | No internet, server unreachable, timeout |
+| `GenericError` | General error (catch-all) | Various server-side errors |
+| `DataFormatError` | Invalid data format | Malformed request, validation errors |
+| `DuplicateEntryError` | Duplicate entry in database | Unique constraint violation |
+
+## ErrorDetail Interface
+
+The `ErrorDetail` interface provides comprehensive error information:
+
+```typescript
+interface ErrorDetail {
+  title?: string;
+  description?: string;
+  type?: RenovationError;
+  info: {
+    server_messages?: string[];
+    httpCode?: number;
+    cause?: string;
+    suggestion?: string;
+    data?: any;
+    rawResponse?: AxiosResponse;
+    rawError?: AxiosError;
+  };
+}
+```
+
+### ErrorDetail Properties
+
+<ParamField path="title" type="string">
+  Optional. A user-friendly title for the error.
+  
+  Can be displayed in UI notifications or error dialogs.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Optional. A short, user-friendly description of the error.
+  
+  Provides context about what went wrong.
+</ParamField>
+
+<ParamField path="type" type="RenovationError">
+  Optional. The error type from the `RenovationError` enum.
+</ParamField>
+
+<ParamField path="info.server_messages" type="string[]">
+  Optional. Messages from the server (backend).
+  
+  Contains server-side validation errors or informational messages.
+</ParamField>
+
+<ParamField path="info.httpCode" type="number">
+  Optional. HTTP status code from the failed request.
+</ParamField>
+
+<ParamField path="info.cause" type="string">
+  Optional. The underlying cause of the error.
+  
+  Provides technical details about what went wrong.
+</ParamField>
+
+<ParamField path="info.suggestion" type="string">
+  Optional. A suggestion for resolving the error.
+  
+  Helpful for guiding users toward a solution.
+</ParamField>
+
+<ParamField path="info.data" type="any">
+  Optional. Additional error data from the server.
+  
+  May contain validation errors, stack traces, or other debug information.
+</ParamField>
+
+<ParamField path="info.rawResponse" type="AxiosResponse">
+  Optional. The raw Axios response object.
+  
+  Useful for debugging and accessing raw HTTP response details.
+</ParamField>
+
+<ParamField path="info.rawError" type="AxiosError">
+  Optional. The raw Axios error object.
+  
+  Available when a network error or request failure occurs.
+</ParamField>
+
+## Basic Error Handling
+
+### Success/Failure Check
+
+Always check the `success` property:
+
+```typescript
+const response = await renovation.model.getDoc("User", "john@example.com");
+
+if (response.success) {
+  const user = response.data;
+  console.log(`User: ${user.full_name}`);
+} else {
+  console.error(`Failed to fetch user: ${response.httpCode}`);
+}
+```
+
+### Accessing Error Details
+
+```typescript
+const response = await renovation.auth.login(username, password);
+
+if (!response.success) {
+  console.error("Login failed:");
+  console.error("HTTP Code:", response.httpCode);
+  console.error("Error Type:", response.exc);
+  
+  if (response.error) {
+    console.error("Title:", response.error.title);
+    console.error("Description:", response.error.description);
+    console.error("Cause:", response.error.info.cause);
+    console.error("Suggestion:", response.error.info.suggestion);
+  }
+}
+```
+
+## Error Type Handling
+
+Handle specific error types differently:
+
+```typescript
+import { RenovationError } from "renovation-core";
+
+const response = await renovation.model.getDoc("Task", "TASK-001");
+
+if (!response.success) {
+  switch (response.exc) {
+    case RenovationError.AuthenticationError:
+      // Session expired - redirect to login
+      console.log("Please login again");
+      window.location.href = "/login";
+      break;
+      
+    case RenovationError.PermissionError:
+      // User lacks permission
+      console.error("You don't have permission to view this task");
+      break;
+      
+    case RenovationError.NotFoundError:
+      // Document doesn't exist
+      console.error("Task not found");
+      break;
+      
+    case RenovationError.NetworkError:
+      // Network issue - retry?
+      console.error("Network error. Please check your connection.");
+      break;
+      
+    default:
+      // Generic error handling
+      console.error("An error occurred:", response.error);
+  }
+}
+```
+
+## Common Error Scenarios
+
+### Authentication Errors
+
+```typescript
+const response = await renovation.auth.login(username, password);
+
+if (!response.success) {
+  if (response.exc === RenovationError.AuthenticationError) {
+    // Invalid credentials
+    alert("Invalid username or password");
+  } else {
+    // Other error (network, server, etc.)
+    alert("Login failed. Please try again.");
+  }
+}
+```
+
+### Permission Errors
+
+```typescript
+const response = await renovation.model.deleteDoc("User", "john@example.com");
+
+if (!response.success) {
+  if (response.exc === RenovationError.PermissionError) {
+    console.error("You don't have permission to delete users");
+    
+    // Show user-friendly message
+    if (response.error?.info.suggestion) {
+      console.log("Suggestion:", response.error.info.suggestion);
+    }
+  }
+}
+```
+
+### Not Found Errors
+
+```typescript
+const response = await renovation.model.getDoc("Customer", "CUST-999");
+
+if (!response.success) {
+  if (response.exc === RenovationError.NotFoundError) {
+    console.error("Customer not found");
+    // Redirect to customer list
+    router.push("/customers");
+  }
+}
+```
+
+### Network Errors
+
+```typescript
+const response = await renovation.model.saveDoc(doc);
+
+if (!response.success) {
+  if (response.exc === RenovationError.NetworkError) {
+    console.error("Network error. Retrying...");
+    
+    // Implement retry logic
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return renovation.model.saveDoc(doc);
+  }
+}
+```
+
+### Validation Errors
+
+```typescript
+const response = await renovation.model.saveDoc({
+  doctype: "User",
+  email: "invalid-email",  // Invalid format
+  first_name: "John"
+});
+
+if (!response.success) {
+  // Check for validation errors in server messages
+  if (response.error?.info.server_messages) {
+    for (const message of response.error.info.server_messages) {
+      console.error("Validation error:", message);
+    }
+  }
+}
+```
+
+### Duplicate Entry Errors
+
+```typescript
+const response = await renovation.model.saveDoc({
+  doctype: "User",
+  email: "existing@example.com"  // Already exists
+});
+
+if (!response.success) {
+  if (response.exc === RenovationError.DuplicateEntryError) {
+    console.error("A user with this email already exists");
+  }
+}
+```
+
+## Session Expiration Handling
+
+The SDK automatically handles session expiration:
+
+```typescript
+import { SessionStatus } from "renovation-core";
+
+// Subscribe to session status changes
+SessionStatus.subscribe(status => {
+  if (!status.loggedIn && status.session_expired) {
+    console.log("Session expired at:", new Date(status.timestamp * 1000));
+    
+    // Redirect to login or show modal
+    window.location.href = "/login?reason=session_expired";
+  }
+});
+
+// Make API calls - session expiration is handled automatically
+const response = await renovation.model.getDoc("Task", "TASK-001");
+```
+
+<Note>
+When a session expires, the SDK automatically updates the `SessionStatus` observable with `loggedIn: false` and `session_expired: true`.
+</Note>
+
+## Server Messages
+
+Server messages provide additional context from the backend:
+
+```typescript
+const response = await renovation.model.saveDoc(doc);
+
+if (!response.success && response.error?.info.server_messages) {
+  // Display all server messages
+  response.error.info.server_messages.forEach(msg => {
+    console.log("Server message:", msg);
+  });
+}
+```
+
+### Message Bus Integration
+
+Server messages are automatically published to the message bus:
+
+```typescript
+import { Renovation } from "renovation-core";
+
+const renovation = new Renovation();
+await renovation.init({ hostURL: "...", backend: "frappe" });
+
+// Subscribe to messages
+renovation.messages.subscribe(message => {
+  console.log("Server message:", message);
+  
+  // Display in UI (toast, notification, etc.)
+  if (message.indicator === "red") {
+    showErrorToast(message.message);
+  }
+});
+```
+
+## Best Practices
+
+### 1. Always Check Success Status
+
+```typescript
+// ✅ Good
+const response = await renovation.model.getDoc("User", "john@example.com");
+if (response.success) {
+  // Use response.data
+} else {
+  // Handle error
+}
+
+// ❌ Bad - Assumes success
+const response = await renovation.model.getDoc("User", "john@example.com");
+const user = response.data;  // May be undefined or error data!
+```
+
+### 2. Handle Specific Error Types
+
+```typescript
+// ✅ Good - Specific handling
+if (!response.success) {
+  if (response.exc === RenovationError.PermissionError) {
+    showPermissionDeniedDialog();
+  } else if (response.exc === RenovationError.NetworkError) {
+    showRetryDialog();
+  } else {
+    showGenericErrorDialog();
+  }
+}
+
+// ❌ Bad - Generic handling only
+if (!response.success) {
+  alert("Something went wrong");
+}
+```
+
+### 3. Provide User-Friendly Messages
+
+```typescript
+// ✅ Good - User-friendly
+if (!response.success) {
+  const message = response.error?.description 
+    || "Unable to save the document. Please try again.";
+  showErrorNotification(message);
+}
+
+// ❌ Bad - Technical error dump
+if (!response.success) {
+  console.error(response);
+}
+```
+
+### 4. Log Errors for Debugging
+
+```typescript
+if (!response.success) {
+  // Log for debugging
+  console.error("API call failed:", {
+    httpCode: response.httpCode,
+    errorType: response.exc,
+    error: response.error,
+    rawResponse: response._
+  });
+  
+  // Show user-friendly message
+  showErrorNotification("Failed to load data");
+}
+```
+
+### 5. Handle Session Expiration Globally
+
+```typescript
+// Setup global session handler
+import { SessionStatus } from "renovation-core";
+
+SessionStatus.subscribe(status => {
+  if (!status.loggedIn && status.session_expired) {
+    // Clear local state
+    localStorage.clear();
+    
+    // Redirect to login
+    window.location.href = "/login?expired=true";
+  }
+});
+```
+
+### 6. Implement Retry Logic for Network Errors
+
+```typescript
+async function apiCallWithRetry<T>(
+  apiCall: () => Promise<RequestResponse<T>>,
+  maxRetries = 3
+): Promise<RequestResponse<T>> {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await apiCall();
+    
+    if (response.success) {
+      return response;
+    }
+    
+    if (response.exc === RenovationError.NetworkError && i < maxRetries - 1) {
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => 
+        setTimeout(resolve, Math.pow(2, i) * 1000)
+      );
+      continue;
+    }
+    
+    return response;
+  }
+}
+
+// Usage
+const response = await apiCallWithRetry(() =>
+  renovation.model.getDoc("Task", "TASK-001")
+);
+```
+
+### 7. Create Error Handling Utilities
+
+```typescript
+import { RequestResponse, RenovationError } from "renovation-core";
+
+function handleApiError(response: RequestResponse<any>): string {
+  if (response.success) {
+    return "";
+  }
+  
+  switch (response.exc) {
+    case RenovationError.AuthenticationError:
+      return "Please login to continue";
+    case RenovationError.PermissionError:
+      return "You don't have permission to perform this action";
+    case RenovationError.NotFoundError:
+      return "The requested resource was not found";
+    case RenovationError.NetworkError:
+      return "Network error. Please check your connection.";
+    case RenovationError.DuplicateEntryError:
+      return "This entry already exists";
+    default:
+      return response.error?.description 
+        || "An unexpected error occurred";
+  }
+}
+
+// Usage
+const response = await renovation.model.saveDoc(doc);
+if (!response.success) {
+  const errorMessage = handleApiError(response);
+  showNotification(errorMessage, "error");
+}
+```
+
+## RequestResponse Static Methods
+
+Create custom `RequestResponse` objects:
+
+### Success Response
+
+```typescript
+import { RequestResponse } from "renovation-core";
+
+// Create a success response
+const response = RequestResponse.success(
+  { name: "John", email: "john@example.com" },
+  200
+);
+
+console.log(response.success);  // true
+console.log(response.data);     // { name: "John", ... }
+```
+
+### Failure Response
+
+```typescript
+import { RequestResponse, RenovationError } from "renovation-core";
+
+// Create a failure response
+const response = RequestResponse.fail({
+  title: "Save Failed",
+  description: "Unable to save the document",
+  type: RenovationError.PermissionError,
+  info: {
+    httpCode: 403,
+    cause: "User lacks write permission",
+    suggestion: "Contact your administrator for access"
+  }
+});
+
+console.log(response.success);  // false
+console.log(response.exc);      // RenovationError.PermissionError
+```
+
+<Warning>
+The `RequestResponse.failed()` method is deprecated. Use `RequestResponse.fail()` instead.
+</Warning>
+
+## Next Steps
+
+- Explore specific controller error handling
+- Set up error monitoring and logging
+- Implement custom error recovery strategies

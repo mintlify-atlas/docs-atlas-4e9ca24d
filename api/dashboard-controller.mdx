@@ -1,0 +1,487 @@
+---
+title: 'DashboardController'
+description: 'Complete API reference for dashboard management in Renovation Core SDK'
+---
+
+## Overview
+
+The `DashboardController` manages dashboard metadata, data retrieval, and layouts for Renovation Dashboard system.
+
+## Dashboard Retrieval
+
+### getDashboardMeta()
+
+Retrieves metadata for a specific dashboard.
+
+```typescript
+const response = await core.dashboard.getDashboardMeta({
+  dashboardName: 'Sales Balance'
+});
+```
+
+<ParamField path="getDashboardMetaParams" type="GetDashboardMetaParams" required>
+  Dashboard metadata parameters
+  <Expandable title="GetDashboardMetaParams properties">
+    <ParamField path="dashboardName" type="string" required>
+      Name of the dashboard
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="FrappeDashboard">
+  Dashboard metadata
+  <Expandable title="FrappeDashboard properties">
+    <ResponseField name="name" type="string">
+      Dashboard name
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Display title
+    </ResponseField>
+    <ResponseField name="subtitle" type="string">
+      Dashboard subtitle
+    </ResponseField>
+    <ResponseField name="type" type="'lines' | 'bar' | 'pie' | 'percent' | 'change' | 'simple'">
+      Dashboard chart type
+    </ResponseField>
+    <ResponseField name="exc_type" type="'eval' | 'cmd'">
+      Execution type
+    </ResponseField>
+    <ResponseField name="cmd" type="string">
+      Backend command to execute (if exc_type is 'cmd')
+    </ResponseField>
+    <ResponseField name="eval_code" type="string">
+      JavaScript code to evaluate (if exc_type is 'eval')
+    </ResponseField>
+    <ResponseField name="params" type="FrappeDashboardParams[]">
+      Dashboard parameters
+    </ResponseField>
+    <ResponseField name="enable" type="string">
+      Whether dashboard is enabled
+    </ResponseField>
+    <ResponseField name="is_standard" type="'Yes' | 'No'">
+      Whether it's a standard dashboard
+    </ResponseField>
+    <ResponseField name="can_resize_items" type="boolean">
+      Whether items can be resized
+    </ResponseField>
+    <ResponseField name="can_rearrange_items" type="boolean">
+      Whether items can be rearranged
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### getAllDashboardsMeta()
+
+Retrieves metadata for all available dashboards.
+
+```typescript
+const response = await core.dashboard.getAllDashboardsMeta();
+```
+
+<ResponseField name="data" type="FrappeDashboard[]">
+  Array of all dashboard metadata
+</ResponseField>
+
+### getDashboardData()
+
+Retrieves the actual data for a dashboard.
+
+```typescript
+const response = await core.dashboard.getDashboardData({
+  dashboardName: 'Sales Balance',
+  params: [
+    {
+      param: 'from_date',
+      value: '2024-01-01'
+    },
+    {
+      param: 'to_date',
+      value: '2024-12-31'
+    }
+  ]
+});
+```
+
+<ParamField path="getDashboardDataParams" type="GetDashboardDataParams" required>
+  Dashboard data parameters
+  <Expandable title="GetDashboardDataParams properties">
+    <ParamField path="dashboardName" type="string" required>
+      Name of the dashboard
+    </ParamField>
+    <ParamField path="params" type="FrappeDashboardParams[]">
+      Parameter values for dashboard
+      <Expandable title="FrappeDashboardParams properties">
+        <ParamField path="param" type="string">
+          Parameter name
+        </ParamField>
+        <ParamField path="type" type="'Select' | 'Number' | 'Text' | 'Check' | 'Radio' | 'Date'">
+          Parameter type
+        </ParamField>
+        <ParamField path="value" type="any">
+          Parameter value
+        </ParamField>
+        <ParamField path="default_value" type="any">
+          Default value
+        </ParamField>
+        <ParamField path="label" type="string">
+          Display label
+        </ParamField>
+        <ParamField path="reqd" type="boolean">
+          Whether required
+        </ParamField>
+        <ParamField path="options" type="string">
+          Options for Select type
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="DashboardDataTypes">
+  Dashboard data (structure depends on dashboard type)
+</ResponseField>
+
+### getAllDashboardData()
+
+Retrieves data for all dashboards from cache.
+
+```typescript
+const allData = core.dashboard.getAllDashboardData();
+
+// Returns object like:
+// {
+//   'Sales Balance': RequestResponse<DashboardData>,
+//   'Revenue Overview': RequestResponse<DashboardData>
+// }
+```
+
+<ResponseField name="return" type="{ [dashboardName: string]: RequestResponse<DashboardData> }">
+  Object containing cached data for all dashboards
+</ResponseField>
+
+## Dashboard Layouts
+
+### getDashboardLayout()
+
+Retrieves a specific dashboard layout configuration.
+
+```typescript
+const response = await core.dashboard.getDashboardLayout({
+  layout: 'Sales Dashboard'
+});
+```
+
+<ParamField path="getDashboardLayoutParams" type="GetDashboardLayoutParams">
+  Layout retrieval parameters
+  <Expandable title="GetDashboardLayoutParams properties">
+    <ParamField path="layout" type="string">
+      Layout name. If not specified, returns user's default layout
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="DashboardLayout">
+  Dashboard layout configuration
+</ResponseField>
+
+### getAvailableLayouts()
+
+Retrieves list of available dashboard layouts for the user.
+
+```typescript
+const response = await core.dashboard.getAvailableLayouts();
+```
+
+<ResponseField name="data" type="Array<{ title: string, name: string }>">
+  List of available layouts with title and name
+</ResponseField>
+
+## Data Management
+
+### refreshData()
+
+Refreshes dashboard data from the backend.
+
+```typescript
+// Refresh all dashboards
+await core.dashboard.refreshData();
+
+// Refresh specific dashboard
+await core.dashboard.refreshData({
+  dashboardName: 'Sales Balance'
+});
+```
+
+<ParamField path="refreshDataParams" type="RefreshDataParams">
+  Refresh parameters
+  <Expandable title="RefreshDataParams properties">
+    <ParamField path="dashboardName" type="string">
+      Specific dashboard to refresh. If not specified, refreshes all
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="data" type="string | null">
+  Returns null on success
+</ResponseField>
+
+### dashboardDataListener
+
+Observable for listening to dashboard data changes.
+
+```typescript
+core.dashboard.dashboardDataListener.subscribe(response => {
+  if (response && response.success) {
+    console.log('Dashboard updated:', response.data);
+  }
+});
+```
+
+<ResponseField name="dashboardDataListener" type="BehaviorSubject<RequestResponse<any>>">
+  Observable that emits when dashboard data updates
+</ResponseField>
+
+## Cache Management
+
+### clearCache()
+
+Clears dashboard metadata and data cache.
+
+```typescript
+core.dashboard.clearCache();
+```
+
+### dashboardMetaCache
+
+Direct access to dashboard metadata cache.
+
+```typescript
+// Get cached dashboard
+const cached = core.dashboard.dashboardMetaCache['Sales Balance'];
+
+// Check if cached
+if (core.dashboard.dashboardMetaCache['Sales Balance']) {
+  console.log('Dashboard is cached');
+}
+```
+
+<ResponseField name="dashboardMetaCache" type="{ [dashboardName: string]: FrappeDashboard }">
+  Cached dashboard metadata
+</ResponseField>
+
+<Note>
+Requires the `renovation_core` app to be installed.
+</Note>
+
+## Code Examples
+
+### Basic Dashboard Usage
+
+<CodeGroup>
+```typescript Load and Display Dashboard
+// Get dashboard metadata
+const metaResponse = await core.dashboard.getDashboardMeta({
+  dashboardName: 'Sales Balance'
+});
+
+if (metaResponse.success) {
+  const dashboard = metaResponse.data;
+  console.log('Dashboard title:', dashboard.title);
+  console.log('Dashboard type:', dashboard.type);
+  console.log('Parameters:', dashboard.params);
+  
+  // Get dashboard data
+  const dataResponse = await core.dashboard.getDashboardData({
+    dashboardName: 'Sales Balance',
+    params: dashboard.params // Use default values
+  });
+  
+  if (dataResponse.success) {
+    console.log('Dashboard data:', dataResponse.data);
+  }
+}
+```
+
+```typescript With Parameters
+// Get dashboard with specific parameters
+const dataResponse = await core.dashboard.getDashboardData({
+  dashboardName: 'Sales Analytics',
+  params: [
+    {
+      param: 'from_date',
+      value: '2024-01-01',
+      type: 'Date',
+      label: 'From Date',
+      reqd: true
+    },
+    {
+      param: 'to_date',
+      value: '2024-12-31',
+      type: 'Date',
+      label: 'To Date',
+      reqd: true
+    },
+    {
+      param: 'territory',
+      value: 'North',
+      type: 'Select',
+      label: 'Territory',
+      reqd: false
+    }
+  ]
+});
+
+if (dataResponse.success) {
+  renderChart(dataResponse.data);
+}
+```
+
+```typescript Real-time Updates
+// Subscribe to dashboard updates
+const subscription = core.dashboard.dashboardDataListener.subscribe(
+  response => {
+    if (response && response.success) {
+      const data = response.data;
+      console.log('Dashboard updated:', data.dashboardName);
+      updateChart(data);
+    } else if (response && !response.success) {
+      console.error('Dashboard error:', response.error);
+    }
+  }
+);
+
+// Refresh data periodically
+setInterval(() => {
+  core.dashboard.refreshData({
+    dashboardName: 'Sales Balance'
+  });
+}, 60000); // Every minute
+
+// Cleanup
+// subscription.unsubscribe();
+```
+</CodeGroup>
+
+### Dashboard Layout Management
+
+```typescript
+// Get available layouts
+const layoutsResponse = await core.dashboard.getAvailableLayouts();
+
+if (layoutsResponse.success) {
+  console.log('Available layouts:', layoutsResponse.data);
+  
+  // Load specific layout
+  const layoutResponse = await core.dashboard.getDashboardLayout({
+    layout: layoutsResponse.data[0].name
+  });
+  
+  if (layoutResponse.success) {
+    const layout = layoutResponse.data;
+    console.log('Layout configuration:', layout);
+    
+    // Load all dashboards in layout
+    // (layout structure depends on backend implementation)
+  }
+}
+
+// Load default layout
+const defaultLayout = await core.dashboard.getDashboardLayout();
+if (defaultLayout.success) {
+  console.log('Default layout:', defaultLayout.data);
+}
+```
+
+### Multiple Dashboards
+
+```typescript
+async function loadMultipleDashboards(dashboardNames: string[]) {
+  const results = [];
+  
+  for (const name of dashboardNames) {
+    // Get metadata
+    const metaResponse = await core.dashboard.getDashboardMeta({
+      dashboardName: name
+    });
+    
+    if (metaResponse.success) {
+      // Get data
+      const dataResponse = await core.dashboard.getDashboardData({
+        dashboardName: name
+      });
+      
+      results.push({
+        name,
+        meta: metaResponse.data,
+        data: dataResponse.success ? dataResponse.data : null
+      });
+    }
+  }
+  
+  return results;
+}
+
+// Usage
+const dashboards = await loadMultipleDashboards([
+  'Sales Balance',
+  'Revenue Overview',
+  'Customer Stats'
+]);
+
+dashboards.forEach(dashboard => {
+  console.log(`${dashboard.name}:`, dashboard.data);
+});
+```
+
+### Parameter Validation
+
+```typescript
+async function validateAndGetDashboardData(
+  dashboardName: string,
+  userParams: { [key: string]: any }
+) {
+  // Get dashboard metadata
+  const metaResponse = await core.dashboard.getDashboardMeta({
+    dashboardName
+  });
+  
+  if (!metaResponse.success) {
+    throw new Error('Dashboard not found');
+  }
+  
+  const dashboard = metaResponse.data;
+  
+  // Build parameters with validation
+  const params = dashboard.params.map(param => {
+    const value = userParams[param.param] || param.default_value;
+    
+    // Check required parameters
+    if (param.reqd && !value) {
+      throw new Error(`Required parameter missing: ${param.label}`);
+    }
+    
+    return {
+      ...param,
+      value
+    };
+  });
+  
+  // Get data
+  return await core.dashboard.getDashboardData({
+    dashboardName,
+    params
+  });
+}
+
+// Usage
+try {
+  const response = await validateAndGetDashboardData('Sales Analytics', {
+    from_date: '2024-01-01',
+    to_date: '2024-12-31'
+  });
+  
+  console.log('Dashboard data:', response.data);
+} catch (error) {
+  console.error('Error:', error.message);
+}
+```

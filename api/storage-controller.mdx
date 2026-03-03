@@ -1,0 +1,396 @@
+---
+title: 'StorageController'
+description: 'Complete API reference for file upload and storage operations in Renovation Core SDK'
+---
+
+## Overview
+
+The `StorageController` handles file uploads, folder management, and file URL generation with support for both Socket.IO and HTTP upload methods.
+
+## File Upload
+
+### uploadFile()
+
+Uploads a file to the backend with progress tracking.
+
+```typescript
+const uploadStatus = core.storage.uploadFile({
+  file: fileObject,
+  isPrivate: false,
+  folder: 'Home/Attachments',
+  doctype: 'Sales Invoice',
+  docname: 'SI-001',
+  docfield: 'attachment'
+});
+
+uploadStatus.subscribe(status => {
+  if (status.status === 'uploading') {
+    console.log('Progress:', status.progress + '%');
+  } else if (status.status === 'completed') {
+    console.log('Upload complete:', status.requestResponse.data);
+  }
+});
+```
+
+<ParamField path="uploadFileParams" type="UploadFileParams" required>
+  Upload parameters
+  <Expandable title="UploadFileParams properties">
+    <ParamField path="file" type="File">
+      File object (browser)
+    </ParamField>
+    <ParamField path="filePath" type="string">
+      File path (Node.js)
+    </ParamField>
+    <ParamField path="fileBuffer" type="Buffer">
+      File buffer (Node.js)
+    </ParamField>
+    <ParamField path="fileName" type="string">
+      File name (required with fileBuffer)
+    </ParamField>
+    <ParamField path="isPrivate" type="boolean">
+      Whether file is private. Default: false
+    </ParamField>
+    <ParamField path="folder" type="string">
+      Destination folder. Default: 'Home'
+    </ParamField>
+    <ParamField path="doctype" type="string">
+      Associated doctype
+    </ParamField>
+    <ParamField path="docname" type="string">
+      Associated document name
+    </ParamField>
+    <ParamField path="docfield" type="string">
+      Field to attach file to
+    </ParamField>
+    <ParamField path="doc" type="RenovationDocument">
+      Document object to update
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="BehaviorSubject<UploadFileStatus>">
+  Observable upload status
+  <Expandable title="UploadFileStatus properties">
+    <ResponseField name="status" type="'uploading' | 'completed' | 'error'">
+      Current upload status
+    </ResponseField>
+    <ResponseField name="fileName" type="string">
+      Name of file being uploaded
+    </ResponseField>
+    <ResponseField name="hasProgress" type="boolean">
+      Whether progress tracking is available
+    </ResponseField>
+    <ResponseField name="progress" type="number">
+      Upload progress (0-100)
+    </ResponseField>
+    <ResponseField name="requestResponse" type="RequestResponse<UploadFileResponse>">
+      Final upload response
+      <Expandable title="UploadFileResponse properties">
+        <ResponseField name="file_name" type="string">
+          Uploaded file name
+        </ResponseField>
+        <ResponseField name="file_url" type="string">
+          URL to access the file
+        </ResponseField>
+        <ResponseField name="is_private" type="boolean">
+          Privacy setting
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          File document name
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+Automatically falls back to HTTP upload if Socket.IO upload fails.
+</Note>
+
+## Folder Management
+
+### createFolder()
+
+Creates a new folder in the file system.
+
+```typescript
+const response = await core.storage.createFolder(
+  'Invoices',
+  'Home/Documents'
+);
+```
+
+<ParamField path="folderName" type="string" required>
+  Name of the folder to create
+</ParamField>
+
+<ParamField path="parentFolder" type="string">
+  Parent folder path. Default: 'Home'
+</ParamField>
+
+<ResponseField name="data" type="any">
+  Created folder information
+</ResponseField>
+
+<Warning>
+Folder name cannot contain forward slashes (/).
+</Warning>
+
+### checkFolderExists()
+
+Checks if a folder exists.
+
+```typescript
+const response = await core.storage.checkFolderExists(
+  'Home/Documents/Invoices'
+);
+
+if (response.data) {
+  console.log('Folder exists');
+}
+```
+
+<ParamField path="folderDir" type="string" required>
+  Full folder path
+</ParamField>
+
+<ResponseField name="data" type="boolean">
+  True if folder exists, false otherwise
+</ResponseField>
+
+## URL Generation
+
+### getUrl()
+
+Generates the complete URL to access a file or resource.
+
+```typescript
+const fileUrl = core.storage.getUrl('/files/invoice.pdf');
+// Returns: 'https://example.com/files/invoice.pdf'
+
+const imageUrl = core.storage.getUrl('/files/logo.png');
+// Returns: 'https://example.com/files/logo.png'
+```
+
+<ParamField path="ref" type="string" required>
+  Relative path or URL reference
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Complete URL with host
+</ResponseField>
+
+<Note>
+Returns the input as-is if it's already a complete URL (starts with 'http').
+</Note>
+
+## Code Examples
+
+### File Upload Scenarios
+
+<CodeGroup>
+```typescript Browser File Upload
+// From file input
+const fileInput = document.querySelector('input[type="file"]');
+const file = fileInput.files[0];
+
+const uploadStatus = core.storage.uploadFile({
+  file: file,
+  isPrivate: false,
+  folder: 'Home/Attachments'
+});
+
+uploadStatus.subscribe(status => {
+  switch (status.status) {
+    case 'uploading':
+      if (status.hasProgress) {
+        updateProgressBar(status.progress);
+      }
+      break;
+      
+    case 'completed':
+      console.log('File uploaded:', status.requestResponse.data.file_url);
+      break;
+      
+    case 'error':
+      console.error('Upload failed:', status.requestResponse.error);
+      break;
+  }
+});
+```
+
+```typescript Upload with Document Attachment
+// Upload and attach to document
+const doc = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+
+const uploadStatus = core.storage.uploadFile({
+  file: file,
+  isPrivate: false,
+  doctype: 'Sales Invoice',
+  docname: 'SI-001',
+  docfield: 'attachment',
+  doc: doc.data
+});
+
+uploadStatus.subscribe(status => {
+  if (status.status === 'completed') {
+    // Document field is automatically updated
+    console.log('Attachment URL:', doc.data.attachment);
+  }
+});
+```
+
+```typescript Node.js File Upload
+// From file path
+const uploadStatus = core.storage.uploadFile({
+  filePath: '/path/to/file.pdf',
+  isPrivate: true,
+  folder: 'Home/Private'
+});
+
+// From buffer
+const buffer = fs.readFileSync('/path/to/file.pdf');
+const uploadStatus = core.storage.uploadFile({
+  fileBuffer: buffer,
+  fileName: 'document.pdf',
+  isPrivate: false,
+  folder: 'Home/Documents'
+});
+```
+</CodeGroup>
+
+### Progress Tracking
+
+```typescript
+let uploadSubscription;
+
+function uploadWithProgress(file: File) {
+  const uploadStatus = core.storage.uploadFile({
+    file: file,
+    folder: 'Home/Uploads'
+  });
+  
+  uploadSubscription = uploadStatus.subscribe(status => {
+    if (status.status === 'uploading' && status.hasProgress) {
+      // Update UI progress bar
+      const progressBar = document.querySelector('.progress-bar');
+      progressBar.style.width = `${status.progress}%`;
+      progressBar.textContent = `${status.progress}%`;
+    } else if (status.status === 'completed') {
+      const response = status.requestResponse;
+      if (response.success) {
+        showSuccess('File uploaded successfully!');
+        console.log('File URL:', response.data.file_url);
+      }
+      uploadSubscription.unsubscribe();
+    } else if (status.status === 'error') {
+      showError('Upload failed: ' + status.requestResponse.error.title);
+      uploadSubscription.unsubscribe();
+    }
+  });
+}
+```
+
+### Folder Management
+
+```typescript
+async function ensureFolderExists(folderPath: string): Promise<boolean> {
+  // Check if folder exists
+  const existsResponse = await core.storage.checkFolderExists(folderPath);
+  
+  if (existsResponse.data) {
+    return true;
+  }
+  
+  // Create folder
+  const parts = folderPath.split('/');
+  const folderName = parts.pop();
+  const parentFolder = parts.join('/') || 'Home';
+  
+  const createResponse = await core.storage.createFolder(
+    folderName,
+    parentFolder
+  );
+  
+  return createResponse.success;
+}
+
+// Usage
+const exists = await ensureFolderExists('Home/Documents/2024');
+if (exists) {
+  // Proceed with upload
+  const uploadStatus = core.storage.uploadFile({
+    file: file,
+    folder: 'Home/Documents/2024'
+  });
+}
+```
+
+### Multiple File Upload
+
+```typescript
+async function uploadMultipleFiles(files: FileList) {
+  const uploads = [];
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    
+    const uploadPromise = new Promise((resolve, reject) => {
+      const uploadStatus = core.storage.uploadFile({
+        file: file,
+        folder: 'Home/Uploads'
+      });
+      
+      uploadStatus.subscribe(status => {
+        if (status.status === 'completed') {
+          if (status.requestResponse.success) {
+            resolve(status.requestResponse.data);
+          } else {
+            reject(status.requestResponse.error);
+          }
+        } else if (status.status === 'error') {
+          reject(status.requestResponse.error);
+        }
+      });
+    });
+    
+    uploads.push(uploadPromise);
+  }
+  
+  try {
+    const results = await Promise.all(uploads);
+    console.log('All files uploaded:', results);
+    return results;
+  } catch (error) {
+    console.error('Upload failed:', error);
+    throw error;
+  }
+}
+```
+
+### Working with URLs
+
+```typescript
+// Get full URLs for file references
+const invoice = await core.model.getDoc({
+  doctype: 'Sales Invoice',
+  docname: 'SI-001'
+});
+
+if (invoice.success && invoice.data.attachment) {
+  // Convert relative path to full URL
+  const fullUrl = core.storage.getUrl(invoice.data.attachment);
+  console.log('Attachment URL:', fullUrl);
+  
+  // Can be used directly in <img> or <a> tags
+  // <img src={fullUrl} />
+  // <a href={fullUrl}>Download</a>
+}
+
+// Works with already complete URLs
+const externalUrl = core.storage.getUrl('https://example.com/file.pdf');
+// Returns: 'https://example.com/file.pdf' (unchanged)
+```
