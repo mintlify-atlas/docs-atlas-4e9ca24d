@@ -1,0 +1,122 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Renovation Core",
+  "projectDescription": "A comprehensive TypeScript SDK for interacting with Frappe backend systems, providing document handling, authentication, and real-time features.",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/initialization",
+              "core/configuration",
+              "core/error-handling"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/authentication",
+              "guides/document-operations",
+              "guides/realtime",
+              "guides/storage",
+              "guides/translations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview"
+            ]
+          },
+          {
+            "group": "Controllers",
+            "pages": [
+              "api/auth-controller",
+              "api/model-controller",
+              "api/meta-controller",
+              "api/permission-controller",
+              "api/storage-controller",
+              "api/translation-controller",
+              "api/dashboard-controller",
+              "api/ui-controller",
+              "api/defaults-controller"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/utils",
+              "api/request",
+              "api/filters"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/document",
+              "api/doctype",
+              "api/docfield"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Authentication & session management with multiple login methods (email/password, OTP, social login)",
+    "Document CRUD operations with local caching and real-time updates",
+    "Meta data and permission management for Frappe doctypes",
+    "File upload and storage handling with progress tracking",
+    "Translation and internationalization support",
+    "Real-time communication via Socket.IO",
+    "Dashboard and UI component management",
+    "Advanced filtering and querying capabilities",
+    "Tag-based document organization",
+    "Document assignment and workflow management"
+  ],
+  "publicApiSurface": [
+    "Renovation.init()",
+    "AuthController.login()",
+    "AuthController.logout()",
+    "AuthController.sendOTP()",
+    "AuthController.verifyOTP()",
+    "ModelController.getDoc()",
+    "ModelController.getList()",
+    "ModelController.saveDoc()",
+    "ModelController.deleteDoc()",
+    "ModelController.newDoc()",
+    "ModelController.assignDoc()",
+    "ModelController.addTag()",
+    "MetaController.getDocMeta()",
+    "PermissionController.hasPerm()",
+    "PermissionController.getDocPerm()",
+    "StorageController.uploadFile()",
+    "TranslationController.loadTranslations()",
+    "TranslationController.getMessage()",
+    "DashboardController.getDashboardMeta()",
+    "DashboardController.getDashboardData()",
+    "RenovationDocument",
+    "DBFilter",
+    "RequestResponse"
+  ]
+}
