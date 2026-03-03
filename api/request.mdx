@@ -61,7 +61,7 @@ import {
   httpMethod, 
   contentType,
   FrappeRequestOptions 
-} from "@renovation/core";
+} from "@leam-tech/renovation-core";
 
 // GET request
 const response = await Request(
@@ -154,7 +154,7 @@ static success<F>(
 </ParamField>
 
 ```typescript
-import { RequestResponse } from "@renovation/core";
+import { RequestResponse } from "@leam-tech/renovation-core";
 
 const response = RequestResponse.success(
   { name: "John", age: 30 },
@@ -178,7 +178,7 @@ static fail(errorDetail: ErrorDetail): RequestResponse<any>
 </ParamField>
 
 ```typescript
-import { RequestResponse, RenovationError } from "@renovation/core";
+import { RequestResponse, RenovationError } from "@leam-tech/renovation-core";
 
 const response = RequestResponse.fail({
   title: "Authentication Failed",
@@ -228,7 +228,7 @@ Standardized error types for API operations.
 </ResponseField>
 
 ```typescript
-import { RenovationError } from "@renovation/core";
+import { RenovationError } from "@leam-tech/renovation-core";
 
 // Check error type
 if (!response.success) {
@@ -339,7 +339,7 @@ Detailed error information structure.
 </ResponseField>
 
 ```typescript
-import { Request, httpMethod, contentType } from "@renovation/core";
+import { Request, httpMethod, contentType } from "@leam-tech/renovation-core";
 
 // Query string parameters
 const getResponse = await Request(
@@ -414,7 +414,7 @@ RxJS BehaviorSubject tracking the current session state.
 </ResponseField>
 
 ```typescript
-import { SessionStatus } from "@renovation/core";
+import { SessionStatus } from "@leam-tech/renovation-core";
 
 // Subscribe to session changes
 SessionStatus.subscribe(status => {
@@ -458,7 +458,7 @@ Sets the client ID for multi-tenancy support.
 </ParamField>
 
 ```typescript
-import { setClientId } from "@renovation/core";
+import { setClientId } from "@leam-tech/renovation-core";
 
 setClientId("site1.example.com");
 // All subsequent requests will include X-Client-Site header
@@ -473,7 +473,7 @@ Retrieves the currently set client ID.
 </ResponseField>
 
 ```typescript
-import { getClientId } from "@renovation/core";
+import { getClientId } from "@leam-tech/renovation-core";
 
 const clientId = getClientId();
 if (clientId) {
@@ -486,7 +486,7 @@ if (clientId) {
 Resets the client ID and removes the header.
 
 ```typescript
-import { resetClientId } from "@renovation/core";
+import { resetClientId } from "@leam-tech/renovation-core";
 
 resetClientId();
 // X-Client-Site header will no longer be included
@@ -519,7 +519,7 @@ Default request options for Frappe backend compatibility.
 </ResponseField>
 
 ```typescript
-import { FrappeRequestOptions } from "@renovation/core";
+import { FrappeRequestOptions } from "@leam-tech/renovation-core";
 
 // Use default Frappe headers
 const headers = { ...FrappeRequestOptions.headers };
@@ -545,7 +545,7 @@ Checks if running in Node.js environment.
 </ResponseField>
 
 ```typescript
-import { isBrowser, isNodeJS } from "@renovation/core";
+import { isBrowser, isNodeJS } from "@leam-tech/renovation-core";
 
 if (isBrowser()) {
   // Browser-specific code
@@ -572,7 +572,7 @@ import {
   SessionStatus,
   setClientId,
   FrappeRequestOptions
-} from "@renovation/core";
+} from "@leam-tech/renovation-core";
 
 const renovation = new Renovation();
 

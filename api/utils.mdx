@@ -62,7 +62,7 @@ Parses a JSON string to an object with error handling.
 </Note>
 
 ```typescript
-import { getJSON } from "@renovation/core";
+import { getJSON } from "@leam-tech/renovation-core";
 
 const jsonString = '{"name":"John","age":30}';
 const obj = getJSON(jsonString);
@@ -90,7 +90,7 @@ Clones an object by value, not by reference.
 </ResponseField>
 
 ```typescript
-import { deepCloneObject } from "@renovation/core";
+import { deepCloneObject } from "@leam-tech/renovation-core";
 
 const original = { name: "John", address: { city: "NYC" } };
 const clone = deepCloneObject(original);
@@ -113,7 +113,7 @@ Compares multiple objects for deep equality by value, not reference.
 </ResponseField>
 
 ```typescript
-import { deepCompare } from "@renovation/core";
+import { deepCompare } from "@leam-tech/renovation-core";
 
 const obj1 = { name: "John", age: 30 };
 const obj2 = { name: "John", age: 30 };
@@ -138,7 +138,7 @@ Returns a promise that resolves after a specified time.
 </ResponseField>
 
 ```typescript
-import { asyncSleep } from "@renovation/core";
+import { asyncSleep } from "@leam-tech/renovation-core";
 
 async function delayedOperation() {
   console.log("Starting...");
@@ -174,7 +174,7 @@ import {
   renovationLog, 
   renovationWarn, 
   renovationError 
-} from "@renovation/core";
+} from "@leam-tech/renovation-core";
 
 // Enable logging with DEBUG environment variable
 // DEBUG=renovation-core-* node app.js
@@ -203,7 +203,7 @@ Returns today's date in YYYY-MM-DD format.
 </ResponseField>
 
 ```typescript
-import { getToday } from "@renovation/core";
+import { getToday } from "@leam-tech/renovation-core";
 
 const today = getToday();
 console.log(today); // "2024-03-15"
@@ -226,7 +226,7 @@ Adds days to a date and returns formatted string.
 </ResponseField>
 
 ```typescript
-import { addDays } from "@renovation/core";
+import { addDays } from "@leam-tech/renovation-core";
 
 const tomorrow = addDays(new Date(), 1);
 const nextWeek = addDays("2024-03-15", 7);
@@ -253,7 +253,7 @@ Adds months to a date and returns formatted string.
 </ResponseField>
 
 ```typescript
-import { addMonths } from "@renovation/core";
+import { addMonths } from "@leam-tech/renovation-core";
 
 const nextMonth = addMonths(new Date(), 1);
 const nextYear = addMonths("2024-03-15", 12);
@@ -275,7 +275,7 @@ Formats a date using date-fns format function.
 </ResponseField>
 
 ```typescript
-import { format } from "@renovation/core";
+import { format } from "@leam-tech/renovation-core";
 
 const formatted = format(new Date(), "YYYY-MM-DD HH:mm:ss");
 console.log(formatted); // "2024-03-15 14:30:00"
@@ -294,7 +294,7 @@ Returns human-readable time distance from now.
 </ResponseField>
 
 ```typescript
-import { distanceInWordsToNow } from "@renovation/core";
+import { distanceInWordsToNow } from "@leam-tech/renovation-core";
 
 const past = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2 hours ago
 const distance = distanceInWordsToNow(past);
@@ -318,7 +318,7 @@ Converts a string to Title Case.
 </ResponseField>
 
 ```typescript
-import { toTitleCase } from "@renovation/core";
+import { toTitleCase } from "@leam-tech/renovation-core";
 
 console.log(toTitleCase("hello world")); // "Hello World"
 console.log(toTitleCase("hello_world")); // "Hello_world"
@@ -337,7 +337,7 @@ Converts underscore_case to camelCase.
 </ResponseField>
 
 ```typescript
-import { underScoreToCamel } from "@renovation/core";
+import { underScoreToCamel } from "@leam-tech/renovation-core";
 
 console.log(underScoreToCamel("hello_world")); // "helloWorld"
 console.log(underScoreToCamel("first_name")); // "firstName"
@@ -356,7 +356,7 @@ Converts underscore_case to Title Case with spaces.
 </ResponseField>
 
 ```typescript
-import { underScoreToTitle } from "@renovation/core";
+import { underScoreToTitle } from "@leam-tech/renovation-core";
 
 console.log(underScoreToTitle("hello_world")); // "Hello World"
 console.log(underScoreToTitle("first_name")); // "First Name"
@@ -381,7 +381,7 @@ Checks if code is running in Node.js environment.
 </ResponseField>
 
 ```typescript
-import { isBrowser, isNodeJS } from "@renovation/core";
+import { isBrowser, isNodeJS } from "@leam-tech/renovation-core";
 
 if (isBrowser()) {
   console.log("Running in browser");
@@ -404,7 +404,7 @@ import {
   addDays,
   getToday,
   underScoreToTitle
-} from "@renovation/core";
+} from "@leam-tech/renovation-core";
 
 const renovation = new Renovation();
 await renovation.init("https://example.com");

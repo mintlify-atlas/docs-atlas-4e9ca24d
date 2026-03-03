@@ -32,7 +32,7 @@ type DBFilter =
 Simple and readable for basic queries.
 
 ```typescript
-import { Renovation } from "@renovation/core";
+import { Renovation } from "@leam-tech/renovation-core";
 
 const renovation = new Renovation();
 await renovation.init("https://example.com");
@@ -475,7 +475,7 @@ const complexFilters = await renovation.model.getList({
 ## Type-Safe Filter Building
 
 ```typescript
-import { DBFilter, DBOperator } from "@renovation/core";
+import { DBFilter, DBOperator } from "@leam-tech/renovation-core";
 
 // Build filters programmatically with type safety
 function buildCustomerFilters(
@@ -587,7 +587,7 @@ import {
   Renovation, 
   DBFilter, 
   DBOperator 
-} from "@renovation/core";
+} from "@leam-tech/renovation-core";
 
 const renovation = new Renovation();
 await renovation.init("https://example.com");
